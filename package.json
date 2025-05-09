@@ -1,7 +1,27 @@
 {
   "name": "mcp-server-memories-off",
-  "module": "index.ts",
+  "version": "0.0.1",
+  "description": "remember this",
+  "bin": {
+    "mcp-server-memories-off": "dist/index.js"
+  },
+  "author": "calicosp",
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "memory"
+  ],
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "scripts": {
+    "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector bun dist/index.js"
+  },
   "private": true,
   "devDependencies": {
     "@types/bun": "latest"
