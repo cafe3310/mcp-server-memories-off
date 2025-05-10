@@ -1,15 +1,103 @@
 import type {Entity, Relation} from "./typings.ts";
 import {KnowledgeGraphManager} from "./knowledgeGraphManager.ts";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
-import {CallToolRequestSchema, ListToolsRequestSchema,} from "@modelcontextprotocol/sdk/types.js";
+import {CallToolRequestSchema, ListToolsRequestSchema, ToolSchema} from "@modelcontextprotocol/sdk/types.js";
+import {logfile} from "./utils.ts";
+import {z} from "zod";
+import {zodToJsonSchema} from "zod-to-json-schema";
 
+const DEFAULT_NAME = "mcp-server-memories-off";
 
-const knowledgeGraphManager = new KnowledgeGraphManager();
+type ToolType = z.infer<typeof ToolSchema>;
+type ToolInputSchemaType = z.infer<typeof ToolSchema.shape.inputSchema>;
 
-export function createServer() {
-// The server instance and tools exposed to Claude
+// Zod schemas for input validation
+export const CreateEntitiesInputSchema = z.object({
+  entities: z.array(
+    z.object({
+      name: z.string().describe("The name of the entity"),
+      entityType: z.string().describe("The type of the entity"),
+      observations: z.array(z.string()).describe("An array of observation contents associated with the entity"),
+    }).required({name: true, entityType: true, observations: true})
+  ),
+}).required({entities: true});
+
+export const CreateRelationsInputSchema = z.object({
+  relations: z.array(
+    z.object({
+      from: z.string().describe("The name of the entity where the relation starts"),
+      to: z.string().describe("The name of the entity where the relation ends"),
+      relationType: z.string().describe("The type of the relation"),
+    }).required({from: true, to: true, relationType: true})
+  ),
+}).required({relations: true});
+
+export const AddObservationsInputSchema = z.object({
+  observations: z.array(
+    z.object({
+      entityName: z.string().describe("The name of the entity to add the observations to"),
+      contents: z.array(z.string()).describe("An array of observation contents to add"),
+    }).required({entityName: true, contents: true})
+  ),
+}).required({observations: true});
+
+export const DeleteEntitiesInputSchema = z.object({
+  entityNames: z.array(z.string().describe("An array of entity names to delete")),
+}).required({entityNames: true});
+
+export const DeleteObservationsInputSchema = z.object({
+  deletions: z.array(
+    z.object({
+      entityName: z.string().describe("The name of the entity containing the observations"),
+      observations: z.array(z.string()).describe("An array of observations to delete"),
+    }).required({entityName: true, observations: true})
+  ),
+}).required({deletions: true});
+
+export const DeleteRelationsInputSchema = z.object({
+  relations: z.array(
+    z.object({
+      from: z.string().describe("The name of the entity where the relation starts"),
+      to: z.string().describe("The name of the entity where the relation ends"),
+      relationType: z.string().describe("The type of the relation"),
+    }).required({from: true, to: true, relationType: true})
+  ),
+}).required({relations: true});
+
+export const ReadGraphInputSchema = z.object({}).required({});
+
+export const SearchNodesInputSchema = z.object({
+  query: z.string().describe("The search query to match against entity names, types, and observation content"),
+}).required({query: true});
+
+export const OpenNodesInputSchema = z.object({
+  names: z.array(z.string().describe("An array of entity names to retrieve")),
+}).required({names: true});
+
+// 网页支付工具输入类型
+export const CreateWebPageAlipayPaymentInputSchema = z.object({
+  outTradeNo: z.string().max(64)
+    .describe("创建订单参数-商户订单号"),
+  totalAmount: z.number().min(0.01).max(100000000).step(0.01).positive()
+    .describe("该订单的支付金额，以元为单位"),
+  orderTitle: z.string().max(256)
+    .describe("该订单的订单标题")
+});
+// 网页支付工具输出类型
+export const CreateWebPageAlipayPaymentOutputSchema = z.object({
+  url: z.string().url()
+    .describe("包含链接的 markdown 文本，你要将文本插入对话内容中。"),
+});
+
+export function createServer(
+  name?: string,
+  yamlPath?: string,
+) {
+
+  const knowledgeGraphManager = new KnowledgeGraphManager(yamlPath);
+
   const server = new Server({
-    name: "memory-server",
+    name: name ?? DEFAULT_NAME,
     version: "1.0.0",
   }, {
     capabilities: {
@@ -18,204 +106,125 @@ export function createServer() {
   },);
 
   server.setRequestHandler(ListToolsRequestSchema, () => {
-    return {
-      tools: [
-        {
-          name: "create_entities",
-          description: "Create multiple new entities in the knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {
-              entities: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    name: {type: "string", description: "The name of the entity"},
-                    entityType: {type: "string", description: "The type of the entity"},
-                    observations: {
-                      type: "array",
-                      items: {type: "string"},
-                      description: "An array of observation contents associated with the entity"
-                    },
-                  },
-                  required: ["name", "entityType", "observations"],
-                },
-              },
-            },
-            required: ["entities"],
-          },
+
+    const tools: ToolType[] =  [
+      {
+        name: "create_entities",
+        description: "Create multiple new entities in the knowledge graph",
+        annotations: {           // Optional hints about tool behavior
+          title: '创建实体',      // Human-readable title for the tool
+          readOnlyHint: false,    // If true, the tool does not modify its environment
+          destructiveHint: false, // If true, the tool may perform destructive updates
+          idempotentHint: false,  // If true, repeated calls with same args have no additional effect
+          openWorldHint: true,    // If true, tool interacts with external entities
         },
-        {
-          name: "create_relations",
-          description: "Create multiple new relations between entities in the knowledge graph. Relations should be in active voice",
-          inputSchema: {
-            type: "object",
-            properties: {
-              relations: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    from: {
-                      type: "string",
-                      description: "The name of the entity where the relation starts"
-                    },
-                    to: {
-                      type: "string",
-                      description: "The name of the entity where the relation ends"
-                    },
-                    relationType: {type: "string", description: "The type of the relation"},
-                  },
-                  required: ["from", "to", "relationType"],
-                },
-              },
-            },
-            required: ["relations"],
-          },
+        inputSchema: zodToJsonSchema(CreateEntitiesInputSchema) as ToolInputSchemaType,
+      },
+      {
+        name: "create_relations",
+        description: "Create multiple new relations between entities in the knowledge graph. Relations should be in active voice",
+        inputSchema: zodToJsonSchema(CreateRelationsInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '创建关系',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
         },
-        {
-          name: "add_observations",
-          description: "Add new observations to existing entities in the knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {
-              observations: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    entityName: {
-                      type: "string",
-                      description: "The name of the entity to add the observations to"
-                    },
-                    contents: {
-                      type: "array",
-                      items: {type: "string"},
-                      description: "An array of observation contents to add"
-                    },
-                  },
-                  required: ["entityName", "contents"],
-                },
-              },
-            },
-            required: ["observations"],
-          },
+      },
+      {
+        name: "add_observations",
+        description: "Add new observations to existing entities in the knowledge graph",
+        inputSchema: zodToJsonSchema(AddObservationsInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '添加观察',
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
         },
-        {
-          name: "delete_entities",
-          description: "Delete multiple entities and their associated relations from the knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {
-              entityNames: {
-                type: "array",
-                items: {type: "string"},
-                description: "An array of entity names to delete"
-              },
-            },
-            required: ["entityNames"],
-          },
+      },
+      {
+        name: "delete_entities",
+        description: "Delete multiple entities and their associated relations from the knowledge graph",
+        inputSchema: zodToJsonSchema(DeleteEntitiesInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '删除实体',
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-        {
-          name: "delete_observations",
-          description: "Delete specific observations from entities in the knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {
-              deletions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    entityName: {
-                      type: "string",
-                      description: "The name of the entity containing the observations"
-                    },
-                    observations: {
-                      type: "array",
-                      items: {type: "string"},
-                      description: "An array of observations to delete"
-                    },
-                  },
-                  required: ["entityName", "observations"],
-                },
-              },
-            },
-            required: ["deletions"],
-          },
+      },
+      {
+        name: "delete_observations",
+        description: "Delete specific observations from entities in the knowledge graph",
+        inputSchema: zodToJsonSchema(DeleteObservationsInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '删除观察',
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-        {
-          name: "delete_relations",
-          description: "Delete multiple relations from the knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {
-              relations: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    from: {
-                      type: "string",
-                      description: "The name of the entity where the relation starts"
-                    },
-                    to: {
-                      type: "string",
-                      description: "The name of the entity where the relation ends"
-                    },
-                    relationType: {type: "string", description: "The type of the relation"},
-                  },
-                  required: ["from", "to", "relationType"],
-                },
-                description: "An array of relations to delete"
-              },
-            },
-            required: ["relations"],
-          },
+      },
+      {
+        name: "delete_relations",
+        description: "Delete multiple relations from the knowledge graph",
+        inputSchema: zodToJsonSchema(DeleteRelationsInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '删除关系',
+          readOnlyHint: false,
+          destructiveHint: true,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-        {
-          name: "read_graph",
-          description: "Read the entire knowledge graph",
-          inputSchema: {
-            type: "object",
-            properties: {},
-          },
+      },
+      {
+        name: "read_graph",
+        description: "Read the entire knowledge graph",
+        inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '读取知识图谱',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-        {
-          name: "search_nodes",
-          description: "Search for nodes in the knowledge graph based on a query",
-          inputSchema: {
-            type: "object",
-            properties: {
-              query: {
-                type: "string",
-                description: "The search query to match against entity names, types, and observation content"
-              },
-            },
-            required: ["query"],
-          },
+      },
+      {
+        name: "search_nodes",
+        description: "Search for nodes in the knowledge graph based on a query",
+        inputSchema: zodToJsonSchema(SearchNodesInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '搜索节点',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-        {
-          name: "open_nodes",
-          description: "Open specific nodes in the knowledge graph by their names",
-          inputSchema: {
-            type: "object",
-            properties: {
-              names: {
-                type: "array",
-                items: {type: "string"},
-                description: "An array of entity names to retrieve",
-              },
-            },
-            required: ["names"],
-          },
+      },
+      {
+        name: "open_nodes",
+        description: "Open specific nodes in the knowledge graph by their names",
+        inputSchema: zodToJsonSchema(OpenNodesInputSchema) as ToolInputSchemaType,
+        annotations: {
+          title: '打开节点',
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
         },
-      ],
-    };
+      },
+    ];
+
+    return { tools };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
+
+    logfile('server', `Received request: ${JSON.stringify(request)}`);
+
     const {name, arguments: args} = request.params;
 
     if (!args) {
@@ -284,5 +293,6 @@ export function createServer() {
         throw new Error(`Unknown tool: ${name}`);
     }
   });
+
   return server;
 }

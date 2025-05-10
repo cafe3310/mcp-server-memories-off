@@ -1,35 +1,47 @@
-// The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 import type {Entity, KnowledgeGraph, Relation} from "./typings.ts";
 import {promises as fs} from "fs";
-import path from "path";
-import {fileURLToPath} from "url";
+import * as os from "os";
+import * as path from "node:path";
+import {checkObjHas, checks, logfileE} from "./utils.ts";
+import YAML from 'yaml'
+
 
 // Define memory file path using environment variable with fallback
-const defaultMemoryPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'memory.json');
+const DEFAULT_YAML_PATH = `${os.homedir()}/mcp-server-memories-off.yaml`;
 
-// If MEMORY_FILE_PATH is just a filename, put it in the same directory as the script
-const MEMORY_FILE_PATH = process.env['MEMORY_FILE_PATH']
-  ? path.isAbsolute(process.env['MEMORY_FILE_PATH'])
-    ? process.env['MEMORY_FILE_PATH']
-    : path.join(path.dirname(fileURLToPath(import.meta.url)), process.env['MEMORY_FILE_PATH'])
-  : defaultMemoryPath;
-
+// The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
+
+  private filePath: string;
+
+  constructor(filePath?: string) {
+    this.filePath = filePath ?? DEFAULT_YAML_PATH;
+    checks(path.isAbsolute(this.filePath), `filePath must be an absolute path, but got ${this.filePath}`);
+  }
+
   private async loadGraph(): Promise<KnowledgeGraph> {
     try {
-      const data = await fs.readFile(MEMORY_FILE_PATH, "utf-8");
-      const lines = data.split("\n").filter(line => line.trim() !== "");
-      return lines.reduce((graph: KnowledgeGraph, line) => {
-        const item = JSON.parse(line);
-        if (item.type === "entity") {
-          graph.entities.push(item as Entity);
-        }
-        if (item.type === "relation") {
-          graph.relations.push(item as Relation);
+      const data = await fs.readFile(this.filePath, "utf-8");
+
+      // should be an array [{entity}, {entity}, ..., {relation}, {relation}, ...]
+      const yamlData: unknown = YAML.parse(data);
+      checks(Array.isArray(yamlData), `Invalid YAML format in ${this.filePath}, should be an array`);
+
+      return yamlData.reduce((graph: KnowledgeGraph, item: unknown) => {
+
+        // should be {type: ..., ...}
+        checkObjHas<{type: string}>(item, 'type', 'string');
+
+        if (item.type === 'entity') {
+          graph.entities.push(item as unknown as Entity);
+        } else if (item.type === 'relation') {
+          graph.relations.push(item as unknown as Relation);
         }
         return graph;
+
       }, {entities: [], relations: []});
     } catch (error) {
+      logfileE('graph', error, `Error loading graph from ${this.filePath}, using empty graph`);
       if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
         return {entities: [], relations: []};
       }
@@ -38,11 +50,11 @@ export class KnowledgeGraphManager {
   }
 
   private async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    const lines = [
-      ...graph.entities.map(e => JSON.stringify({type: "entity", ...e})),
-      ...graph.relations.map(r => JSON.stringify({type: "relation", ...r})),
-    ];
-    await fs.writeFile(MEMORY_FILE_PATH, lines.join("\n"));
+    // const lines = [
+    //   ...graph.entities.map(e => JSON.stringify({type: "entity", ...e})),
+    //   ...graph.relations.map(r => JSON.stringify({type: "relation", ...r})),
+    // ];
+    // await fs.writeFile(this.filePath, lines.join("\n"));
   }
 
   async createEntities(entities: Entity[]): Promise<Entity[]> {
