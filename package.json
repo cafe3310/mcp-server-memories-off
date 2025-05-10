@@ -21,6 +21,7 @@
   "scripts": {
     "watch": "bun run watch",
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
+    "lint": "bunx eslint ./src",
     "inspector": "npx @modelcontextprotocol/inspector bun dist/index.js"
   },
   "private": true,
