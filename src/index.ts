@@ -48,7 +48,7 @@ class KnowledgeGraphManager {
         return graph;
       }, { entities: [], relations: [] });
     } catch (error) {
-      if (error instanceof Error && 'code' in error && (error as any).code === "ENOENT") {
+      if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
         return { entities: [], relations: [] };
       }
       throw error;
