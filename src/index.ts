@@ -2,16 +2,20 @@
 
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createServer} from "./createServer.ts";
+import {logfile, logfileE} from "./utils.ts";
+
+logfile('index', 'Starting MCP server...');
 
 const server = createServer();
+
+logfile('index', 'Server created, setting up transport...');
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Knowledge Graph MCP Server running on stdio");
+  logfile('index', 'Server started, waiting for connections...');
 }
 
 main().catch((error) => {
-  console.error("Fatal error in main():", error);
-  process.exit(1);
+  logfileE('Fatal error in main():', error);
 });
