@@ -19,14 +19,23 @@
   ],
   "type": "module",
   "scripts": {
+    "watch": "bun run watch",
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
     "inspector": "npx @modelcontextprotocol/inspector bun dist/index.js"
   },
   "private": true,
+  "dependencies": {
+    "@eslint/js": "^9.26.0",
+    "@modelcontextprotocol/sdk": "1.0.1",
+    "typescript-eslint": "^8.32.0"
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@stylistic/eslint-plugin": "^4.2.0",
+    "@types/bun": "latest",
+    "@types/node": "^22",
+    "eslint": "^9.26.0"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.8.3"
   }
 }
