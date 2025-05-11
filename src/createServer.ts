@@ -6,7 +6,6 @@ import {logfile} from "./utils.ts";
 import {z} from "zod";
 import {zodToJsonSchema} from "zod-to-json-schema";
 
-const DEFAULT_NAME = "mcp-server-memories-off";
 type ToolType = z.infer<typeof ToolSchema>;
 type ToolInputSchemaType = z.infer<typeof ToolSchema.shape.inputSchema>;
 
@@ -73,14 +72,14 @@ export const OpenNodesInputSchema = z.object({
 }).required({ names: true });
 
 export function createServer(
-  name?: string,
-  yamlPath?: string,
+  name: string,
+  yamlPath: string,
 ) {
 
   const knowledgeGraphManager = new KnowledgeGraphManager(yamlPath);
 
   const server = new Server({
-    name: name ?? DEFAULT_NAME,
+    name: name,
     version: "1.0.0",
   }, {
     capabilities: {
