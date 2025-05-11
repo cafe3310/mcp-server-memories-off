@@ -1,4 +1,4 @@
-import {KnowledgeGraphManager} from "./knowledgeGraphManager.ts";
+import {GraphManager} from "./graph-manager.ts";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {CallToolRequestSchema, ListToolsRequestSchema} from "@modelcontextprotocol/sdk/types.js";
 import {logfile} from "./utils.ts";
@@ -15,7 +15,7 @@ export function createServer(name: string, yamlPath: string) {
     },
   });
 
-  const graphManager = new KnowledgeGraphManager(yamlPath);
+  const graphManager = new GraphManager(yamlPath);
   const toolTypes: ToolType[] = Object.values(toolDef).map(t => t.toolType);
 
   // Request handler: list available tools

@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {CallToolResultSchema, ToolSchema} from "@modelcontextprotocol/sdk/types.js";
-import {KnowledgeGraphManager} from "./knowledgeGraphManager.ts";
+import {GraphManager} from "./graph-manager.ts";
 import {zodToJsonSchema} from "zod-to-json-schema";
 import YAML from "yaml";
 import type {Entity, Relation} from "./typings.ts";
@@ -11,7 +11,7 @@ type ToolResponseType = z.infer<typeof CallToolResultSchema>
 
 export const toolDef: Record<string, {
   toolType: ToolType;
-  handler: (knowledge: KnowledgeGraphManager, args: unknown) => (Promise<ToolResponseType> | ToolResponseType);
+  handler: (knowledge: GraphManager, args: unknown) => (Promise<ToolResponseType> | ToolResponseType);
 }> = {};
 
 // region create_entities
@@ -62,9 +62,9 @@ export const CreateRelationsInputSchema = z.object({
       from: z.string().describe("关系开始的实体名称"),
       to: z.string().describe("关系结束的实体名称"),
       relationType: z.string().describe("关系类型"),
-    }).required({from: true, to: true, relationType: true})
+    })
   ),
-}).required({relations: true});
+});
 
 toolDef['create_relations'] = {
   toolType: {
@@ -101,9 +101,9 @@ export const AddObservationsInputSchema = z.object({
     z.object({
       entityName: z.string().describe("要添加观察的实体名称"),
       contents: z.array(z.string()).describe("要添加的观察内容"),
-    }).required({entityName: true, contents: true})
+    })
   ),
-}).required({observations: true});
+});
 
 toolDef['add_observations'] = {
   toolType: {
@@ -140,7 +140,7 @@ toolDef['add_observations'] = {
 
 export const DeleteEntitiesInputSchema = z.object({
   entityNames: z.array(z.string().describe("要删除的实体名称列表")),
-}).required({entityNames: true});
+});
 
 toolDef['delete_entities'] = {
   toolType: {
@@ -172,9 +172,9 @@ export const DeleteObservationsInputSchema = z.object({
     z.object({
       entityName: z.string().describe("包含观察的实体名称"),
       observations: z.array(z.string()).describe("要删除的观察列表"),
-    }).required({entityName: true, observations: true})
+    }),
   ),
-}).required({deletions: true});
+});
 
 toolDef['delete_observations'] = {
   toolType: {
@@ -210,9 +210,9 @@ export const DeleteRelationsInputSchema = z.object({
       from: z.string().describe("关系开始的实体名称"),
       to: z.string().describe("关系结束的实体名称"),
       relationType: z.string().describe("关系类型"),
-    }).required({from: true, to: true, relationType: true})
+    })
   ),
-}).required({relations: true});
+});
 
 toolDef['delete_relations'] = {
   toolType: {
@@ -239,7 +239,7 @@ toolDef['delete_relations'] = {
 
 // region read_graph
 
-export const ReadGraphInputSchema = z.object({}).required({});
+export const ReadGraphInputSchema = z.object({});
 
 toolDef['read_graph'] = {
   toolType: {
@@ -271,7 +271,7 @@ toolDef['read_graph'] = {
 
 export const SearchNodesInputSchema = z.object({
   query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容，空格将视为 or 操作符"),
-}).required({query: true});
+});
 
 toolDef['search_nodes'] = {
   toolType: {
@@ -305,7 +305,7 @@ toolDef['search_nodes'] = {
 
 export const OpenNodesInputSchema = z.object({
   names: z.array(z.string().describe("要检索的实体名称列表")),
-}).required({names: true});
+});
 
 toolDef['open_nodes'] = {
   toolType: {
@@ -415,7 +415,7 @@ toolDef['merge_entity_types'] = {
     annotations: {
       title: '合并实体类型',
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       idempotentHint: false,
       openWorldHint: true,
     },
