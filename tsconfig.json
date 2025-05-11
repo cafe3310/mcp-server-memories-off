@@ -19,8 +19,8 @@
     "noUncheckedIndexedAccess": true,
 
     // Some stricter flags (disabled by default)
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": true
   },
   "include": ["src/**/*"],
