@@ -5,6 +5,7 @@ import {CallToolRequestSchema, ListToolsRequestSchema, ToolSchema} from "@modelc
 import {logfile} from "./utils.ts";
 import {z} from "zod";
 import {zodToJsonSchema} from "zod-to-json-schema";
+import YAML from "yaml";
 
 type ToolType = z.infer<typeof ToolSchema>;
 type ToolInputSchemaType = z.infer<typeof ToolSchema.shape.inputSchema>;
@@ -164,7 +165,7 @@ export function createServer(
       },
       {
         name: "read_graph",
-        description: "读取整个知识图谱",
+        description: "读取整个知识图谱(YAML格式)",
         inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '读取知识图谱',
@@ -218,24 +219,24 @@ export function createServer(
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.createEntities(args['entities'] as Entity[]), null, 2)
+            text: YAML.stringify(await knowledgeGraphManager.createEntities(args['entities'] as Entity[])),
           }]
         };
       case "create_relations":
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.createRelations(args["relations"] as Relation[]), null, 2)
+            text: YAML.stringify(await knowledgeGraphManager.createRelations(args["relations"] as Relation[])),
           }]
         };
       case "add_observations":
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.addObservations(args["observations"] as {
+            text: YAML.stringify(await knowledgeGraphManager.addObservations(args["observations"] as {
               entityName: string;
               contents: string[]
-            }[]), null, 2)
+            }[])),
           }]
         };
       case "delete_entities":
@@ -254,21 +255,21 @@ export function createServer(
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.readGraph(), null, 2)
+            text: YAML.stringify(await knowledgeGraphManager.readGraph())
           }]
         };
       case "search_nodes":
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.searchNodes(args["query"] as string), null, 2)
+            text: YAML.stringify(await knowledgeGraphManager.searchNodes(args["query"] as string)),
           }]
         };
       case "open_nodes":
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(await knowledgeGraphManager.openNodes(args["names"] as string[]), null, 2)
+            text: YAML.stringify(await knowledgeGraphManager.openNodes(args["names"] as string[])),
           }]
         };
       default:
