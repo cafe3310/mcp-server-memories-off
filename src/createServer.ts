@@ -7,87 +7,70 @@ import {z} from "zod";
 import {zodToJsonSchema} from "zod-to-json-schema";
 
 const DEFAULT_NAME = "mcp-server-memories-off";
-
 type ToolType = z.infer<typeof ToolSchema>;
 type ToolInputSchemaType = z.infer<typeof ToolSchema.shape.inputSchema>;
 
-// Zod schemas for input validation
 export const CreateEntitiesInputSchema = z.object({
   entities: z.array(
     z.object({
-      name: z.string().describe("The name of the entity"),
-      entityType: z.string().describe("The type of the entity"),
-      observations: z.array(z.string()).describe("An array of observation contents associated with the entity"),
-    }).required({name: true, entityType: true, observations: true})
+      name: z.string().describe("实体名称"),
+      entityType: z.string().describe("实体类型"),
+      observations: z.array(z.string()).describe("对实体的观察内容列表"),
+    }).required({ name: true, entityType: true, observations: true })
   ),
-}).required({entities: true});
+}).required({ entities: true });
 
 export const CreateRelationsInputSchema = z.object({
   relations: z.array(
     z.object({
-      from: z.string().describe("The name of the entity where the relation starts"),
-      to: z.string().describe("The name of the entity where the relation ends"),
-      relationType: z.string().describe("The type of the relation"),
-    }).required({from: true, to: true, relationType: true})
+      from: z.string().describe("关系开始的实体名称"),
+      to: z.string().describe("关系结束的实体名称"),
+      relationType: z.string().describe("关系类型"),
+    }).required({ from: true, to: true, relationType: true })
   ),
-}).required({relations: true});
+}).required({ relations: true });
 
 export const AddObservationsInputSchema = z.object({
   observations: z.array(
     z.object({
-      entityName: z.string().describe("The name of the entity to add the observations to"),
-      contents: z.array(z.string()).describe("An array of observation contents to add"),
-    }).required({entityName: true, contents: true})
+      entityName: z.string().describe("要添加观察的实体名称"),
+      contents: z.array(z.string()).describe("要添加的观察内容"),
+    }).required({ entityName: true, contents: true })
   ),
-}).required({observations: true});
+}).required({ observations: true });
 
 export const DeleteEntitiesInputSchema = z.object({
-  entityNames: z.array(z.string().describe("An array of entity names to delete")),
-}).required({entityNames: true});
+  entityNames: z.array(z.string().describe("要删除的实体名称列表")),
+}).required({ entityNames: true });
 
 export const DeleteObservationsInputSchema = z.object({
   deletions: z.array(
     z.object({
-      entityName: z.string().describe("The name of the entity containing the observations"),
-      observations: z.array(z.string()).describe("An array of observations to delete"),
-    }).required({entityName: true, observations: true})
+      entityName: z.string().describe("包含观察的实体名称"),
+      observations: z.array(z.string()).describe("要删除的观察列表"),
+    }).required({ entityName: true, observations: true })
   ),
-}).required({deletions: true});
+}).required({ deletions: true });
 
 export const DeleteRelationsInputSchema = z.object({
   relations: z.array(
     z.object({
-      from: z.string().describe("The name of the entity where the relation starts"),
-      to: z.string().describe("The name of the entity where the relation ends"),
-      relationType: z.string().describe("The type of the relation"),
-    }).required({from: true, to: true, relationType: true})
+      from: z.string().describe("关系开始的实体名称"),
+      to: z.string().describe("关系结束的实体名称"),
+      relationType: z.string().describe("关系类型"),
+    }).required({ from: true, to: true, relationType: true })
   ),
-}).required({relations: true});
+}).required({ relations: true });
 
 export const ReadGraphInputSchema = z.object({}).required({});
 
 export const SearchNodesInputSchema = z.object({
-  query: z.string().describe("The search query to match against entity names, types, and observation content"),
-}).required({query: true});
+  query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容"),
+}).required({ query: true });
 
 export const OpenNodesInputSchema = z.object({
-  names: z.array(z.string().describe("An array of entity names to retrieve")),
-}).required({names: true});
-
-// 网页支付工具输入类型
-export const CreateWebPageAlipayPaymentInputSchema = z.object({
-  outTradeNo: z.string().max(64)
-    .describe("创建订单参数-商户订单号"),
-  totalAmount: z.number().min(0.01).max(100000000).step(0.01).positive()
-    .describe("该订单的支付金额，以元为单位"),
-  orderTitle: z.string().max(256)
-    .describe("该订单的订单标题")
-});
-// 网页支付工具输出类型
-export const CreateWebPageAlipayPaymentOutputSchema = z.object({
-  url: z.string().url()
-    .describe("包含链接的 markdown 文本，你要将文本插入对话内容中。"),
-});
+  names: z.array(z.string().describe("要检索的实体名称列表")),
+}).required({ names: true });
 
 export function createServer(
   name?: string,
@@ -110,7 +93,7 @@ export function createServer(
     const tools: ToolType[] =  [
       {
         name: "create_entities",
-        description: "Create multiple new entities in the knowledge graph",
+        description: "创建多个实体到知识图谱",
         annotations: {           // Optional hints about tool behavior
           title: '创建实体',      // Human-readable title for the tool
           readOnlyHint: false,    // If true, the tool does not modify its environment
@@ -122,7 +105,7 @@ export function createServer(
       },
       {
         name: "create_relations",
-        description: "Create multiple new relations between entities in the knowledge graph. Relations should be in active voice",
+        description: "在知识图谱中创建多个实体之间的关系(使用主动语态)",
         inputSchema: zodToJsonSchema(CreateRelationsInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '创建关系',
@@ -134,7 +117,7 @@ export function createServer(
       },
       {
         name: "add_observations",
-        description: "Add new observations to existing entities in the knowledge graph",
+        description: "为知识图谱中已有的实体添加新的观察内容",
         inputSchema: zodToJsonSchema(AddObservationsInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '添加观察',
@@ -146,7 +129,7 @@ export function createServer(
       },
       {
         name: "delete_entities",
-        description: "Delete multiple entities and their associated relations from the knowledge graph",
+        description: "从知识图谱删除多个实体及其关联关系",
         inputSchema: zodToJsonSchema(DeleteEntitiesInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '删除实体',
@@ -158,7 +141,7 @@ export function createServer(
       },
       {
         name: "delete_observations",
-        description: "Delete specific observations from entities in the knowledge graph",
+        description: "从知识图谱删除实体中的特定观察内容",
         inputSchema: zodToJsonSchema(DeleteObservationsInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '删除观察',
@@ -170,7 +153,7 @@ export function createServer(
       },
       {
         name: "delete_relations",
-        description: "Delete multiple relations from the knowledge graph",
+        description: "从知识图谱删除多个关系",
         inputSchema: zodToJsonSchema(DeleteRelationsInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '删除关系',
@@ -182,7 +165,7 @@ export function createServer(
       },
       {
         name: "read_graph",
-        description: "Read the entire knowledge graph",
+        description: "读取整个知识图谱",
         inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '读取知识图谱',
@@ -194,7 +177,7 @@ export function createServer(
       },
       {
         name: "search_nodes",
-        description: "Search for nodes in the knowledge graph based on a query",
+        description: "根据查询字符串搜索各种节点",
         inputSchema: zodToJsonSchema(SearchNodesInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '搜索节点',
@@ -206,7 +189,7 @@ export function createServer(
       },
       {
         name: "open_nodes",
-        description: "Open specific nodes in the knowledge graph by their names",
+        description: "打开指定名称的节点",
         inputSchema: zodToJsonSchema(OpenNodesInputSchema) as ToolInputSchemaType,
         annotations: {
           title: '打开节点',
