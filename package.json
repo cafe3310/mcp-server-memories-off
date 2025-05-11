@@ -7,7 +7,7 @@
   },
   "author": "junnan.spjn",
   "publishConfig": {
-    "access": "restricted"
+    "registry": "https://registry.antgroup-inc.cn"
   },
   "keywords": [
     "mcp",
