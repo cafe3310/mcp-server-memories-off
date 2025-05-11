@@ -1,228 +1,82 @@
-hi there
+# mcp-server-memories-off
 
-# Knowledge Graph Memory Server
-A basic implementation of persistent memory using a local knowledge graph. This lets Claude remember information about the user across chats.
+## 项目愿景
 
-## Core Concepts
+提供一个轻量级知识管理 MCP 服务，让你的 LLM 长期持续学习和输出知识。
 
-### Entities
-Entities are the primary nodes in the knowledge graph. Each entity has:
-- A unique name (identifier)
-- An entity type (e.g., "person", "organization", "event")
-- A list of observations
+该服务希望帮助个人和团队从日常文本、对话、项目笔记等，自动化、结构化地提取和整合知识。目标是让知识捕捉与整理变得顺畅，也许能让 LLM 为每个人个性化的知识助手，提升沟通与协作效率，并在助力沟通、管理、项目梳理、知识整理等方面有应用空间。
 
-Example:
-```json
-{
-  "name": "John_Smith",
-  "entityType": "person",
-  "observations": ["Speaks fluent Spanish"]
-}
-```
+初始版本基于 Anthropic 的 memory-mcp 迭代。如果有想法和需求，欢迎提出 issue 或提交 merge request。
 
-### Relations
-Relations define directed connections between entities. They are always stored in active voice and describe how entities interact or relate to each other.
+## 功能愿景
 
-Example:
-```json
-{
-  "from": "John_Smith",
-  "to": "Anthropic",
-  "relationType": "works_at"
-}
-```
-### Observations
-Observations are discrete pieces of information about an entity. They are:
+- **自动结构化知识**：通过 LLM 能力，将各种文本中的信息转化为实体、关系、观察，构建个人知识图谱。
 
-- Stored as strings
-- Attached to specific entities
-- Can be added or removed independently
-- Should be atomic (one fact per observation)
+- **简洁的图谱接口**：支持实体、关系的增删查改，便于个性化管理和自动化操作。
 
-Example:
-```json
-{
-  "entityName": "John_Smith",
-  "observations": [
-    "Speaks fluent Spanish",
-    "Graduated in 2019",
-    "Prefers morning meetings"
-  ]
-}
-```
+- **可配置与多实例支持**：自定义数据文件路径，多图谱独立维护，适合不同场景领域的知识管理。
 
-## API
+- **灵活检索与模糊搜索**：支持通过实体名、类型、观察内容的关键词快速检索，提升知识发现效率。
 
-### Tools
-- **create_entities**
-  - Create multiple new entities in the knowledge graph
-  - Input: `entities` (array of objects)
-    - Each object contains:
-      - `name` (string): Entity identifier
-      - `entityType` (string): Type classification
-      - `observations` (string[]): Associated observations
-  - Ignores entities with existing names
+- **备份与还原**：提供备份能力以避免删除等变更出现问题。
 
-- **create_relations**
-  - Create multiple new relations between entities
-  - Input: `relations` (array of objects)
-    - Each object contains:
-      - `from` (string): Source entity name
-      - `to` (string): Target entity name
-      - `relationType` (string): Relationship type in active voice
-  - Skips duplicate relations
+## 应用例子
 
-- **add_observations**
-  - Add new observations to existing entities
-  - Input: `observations` (array of objects)
-    - Each object contains:
-      - `entityName` (string): Target entity
-      - `contents` (string[]): New observations to add
-  - Returns added observations per entity
-  - Fails if entity doesn't exist
+### 个人使用场景
 
-- **delete_entities**
-  - Remove entities and their relations
-  - Input: `entityNames` (string[])
-  - Cascading deletion of associated relations
-  - Silent operation if entity doesn't exist
+- **提取知识**：将文档、日常对话或大段聊天记录发给 LLM，自动提取关键知识点、人物、项目信息、协作关系、个人风格等，构建你的专属知识库。
+- **个性化内容生成**：借助知识图谱，LLM 能更好地理解你的思考习惯和人际网络，有针对性地模仿你的表达，生成符合你个性风格的沟通、总结或项目文档。
 
-- **delete_observations**
-  - Remove specific observations from entities
-  - Input: `deletions` (array of objects)
-    - Each object contains:
-      - `entityName` (string): Target entity
-      - `observations` (string[]): Observations to remove
-  - Silent operation if observation doesn't exist
+### 项目使用场景
 
-- **delete_relations**
-  - Remove specific relations from the graph
-  - Input: `relations` (array of objects)
-    - Each object contains:
-      - `from` (string): Source entity name
-      - `to` (string): Target entity name
-      - `relationType` (string): Relationship type
-  - Silent operation if relation doesn't exist
+- **项目知识库**：小团队可用作项目级别的知识库，持续积累和管理知识，比如联合支付能力 mcp server，自动化记录用户购物偏好、行为习惯等。
+- **agent 学习**：让你的智能 agent 不断学习历史数据与业务诉求，动态调整流程或输出，如自动转化并优化支付 mcp 步骤，提高应用场景中的转化率与满意度。
 
-- **read_graph**
-  - Read the entire knowledge graph
-  - No input required
-  - Returns complete graph structure with all entities and relations
+## Todo List
 
-- **search_nodes**
-  - Search for nodes based on query
-  - Input: `query` (string)
-  - Searches across:
-    - Entity names
-    - Entity types
-    - Observation content
-  - Returns matching entities and their relations
+我计划逐步实现更多智能化和便捷工具，如下为主要 todolist：
 
-- **open_nodes**
-  - Retrieve specific nodes by name
-  - Input: `names` (string[])
-  - Returns:
-    - Requested entities
-    - Relations between requested entities
-  - Silently skips non-existent nodes
+- **配置能力**
+  - [x] 支持自定义知识图谱存储路径
+  - [ ] 支持自定义工具集介绍，便于多领域知识联动
 
-# Usage with Claude Desktop
+- **模糊搜索**
+  - [x] 通过逗号或空格分词搜索
+  - [ ] read_subgraph：获取以某节点为中心的子知识图
+  - [ ] 向量搜索
 
-### Setup
+- **知识融合与整理**
+  - [ ] list_orphan_entities: 支持列出零散（无关系）的实体
+  - [ ] merge_entities: 合并实体
+  - [ ] list_all_entity_types: 列出所有实体类型
+  - [ ] list_most_entity_types: 列出最多的实体类型
+  - [ ] merge_entity_types: 合并实体类型
+  - [ ] list_all_relation_types: 列出所有关系类型
+  - [ ] list_most_relation_types: 列出最多的关系类型
+  - [ ] merge_relation_types: 合并关系类型
 
-Add this to your claude_desktop_config.json:
+- **安全节约**
+  - [x] 接口返回格式从 json 切换为更省 token（钱）的 yaml
+  - [x] backup_graph: 备份整个图
 
-#### Docker
+- **时间线相关**
+  - [ ] 给所有记录添加日期
+  - [ ] 给 get_entities, search_entities 等「信息获取」类工具的返回值中添加当前日期
 
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "docker",
-      "args": ["run", "-i", "-v", "claude-memory:/app/dist", "--rm", "mcp/memory"]
-    }
-  }
-}
-```
+## 配置例子
 
-#### NPX
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ]
-    }
-  }
-}
-```
+构建：
 
-#### NPX with custom setting
+`bun run build`
 
-The server can be configured using the following environment variables:
+运行：
 
-```json
-{
-  "mcpServers": {
-    "memory": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "env": {
-        "MEMORY_FILE_PATH": "/path/to/custom/memory.json"
-      }
-    }
-  }
-}
-```
+`node ..../dist/indexjs`
 
-- `MEMORY_FILE_PATH`: Path to the memory storage JSON file (default: `memory.json` in the server directory)
+环境变量：
 
-### System Prompt
-
-The prompt for utilizing memory depends on the use case. Changing the prompt will help the model determine the frequency and types of memories created.
-
-Here is an example prompt for chat personalization. You could use this prompt in the "Custom Instructions" field of a [Claude.ai Project](https://www.anthropic.com/news/projects).
-
-```
-Follow these steps for each interaction:
-
-1. User Identification:
-   - You should assume that you are interacting with default_user
-   - If you have not identified default_user, proactively try to do so.
-
-2. Memory Retrieval:
-   - Always begin your chat by saying only "Remembering..." and retrieve all relevant information from your knowledge graph
-   - Always refer to your knowledge graph as your "memory"
-
-3. Memory
-   - While conversing with the user, be attentive to any new information that falls into these categories:
-     a) Basic Identity (age, gender, location, job title, education level, etc.)
-     b) Behaviors (interests, habits, etc.)
-     c) Preferences (communication style, preferred language, etc.)
-     d) Goals (goals, targets, aspirations, etc.)
-     e) Relationships (personal and professional relationships up to 3 degrees of separation)
-
-4. Memory Update:
-   - If any new information was gathered during the interaction, update your memory as follows:
-     a) Create entities for recurring organizations, people, and significant events
-     b) Connect them to the current entities using relations
-     b) Store facts about them as observations
-```
-
-## Building
-
-Docker:
-
-```sh
-docker build -t mcp/memory -f src/memory/Dockerfile . 
-```
-
-## License
-
-This MCP server is licensed under the MIT License. This means you are free to use, modify, and distribute the software, subject to the terms and conditions of the MIT License. For more details, please see the LICENSE file in the project repository.
+| 环境变量      | 说明                         | 默认值                                      |
+|---------------|------------------------------|---------------------------------------------|
+| MEM_NAME      | 工具名称                     | memory                                      |
+| MEM_PATH      | 知识图谱存储文件路径         | \`$HOME/mcp-server-memories-off.yaml\`      |
+| MEM_LOG_DIR   | 日志文件目录                 | 系统临时目录（如 \`/tmp\`）                 |
