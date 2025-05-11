@@ -1,27 +1,24 @@
 import type {Entity, KnowledgeGraph, Relation} from "./typings.ts";
 import {promises as fs} from "fs";
-import * as os from "os";
 import * as path from "node:path";
-import {checkObjHas, checks, logfileE} from "./utils.ts";
+import {checkObjHas, checks, logfile, logfileE} from "./utils.ts";
 import YAML from 'yaml'
-
-
-// Define memory file path using environment variable with fallback
-const DEFAULT_YAML_PATH = `${os.homedir()}/mcp-server-memories-off.yaml`;
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
 export class KnowledgeGraphManager {
 
   private filePath: string;
 
-  constructor(filePath?: string) {
-    this.filePath = filePath ?? DEFAULT_YAML_PATH;
+  constructor(filePath: string) {
+    this.filePath = filePath;
     checks(path.isAbsolute(this.filePath), `filePath must be an absolute path, but got ${this.filePath}`);
   }
 
   private async loadGraph(): Promise<KnowledgeGraph> {
     try {
       const data = await fs.readFile(this.filePath, "utf-8");
+
+      logfile('graph', `Loaded graph from ${this.filePath}, length: ${data.length}`);
 
       // should be an array [{entity}, {entity}, ..., {relation}, {relation}, ...]
       const yamlData: unknown = YAML.parse(data);
@@ -50,11 +47,13 @@ export class KnowledgeGraphManager {
   }
 
   private async saveGraph(graph: KnowledgeGraph): Promise<void> {
-    // const lines = [
-    //   ...graph.entities.map(e => JSON.stringify({type: "entity", ...e})),
-    //   ...graph.relations.map(r => JSON.stringify({type: "relation", ...r})),
-    // ];
-    // await fs.writeFile(this.filePath, lines.join("\n"));
+    const lines = [
+      ...graph.entities.map(e => JSON.stringify({type: "entity", ...e})),
+      ...graph.relations.map(r => JSON.stringify({type: "relation", ...r})),
+    ];
+    const yamlString = YAML.stringify(lines);
+    await fs.writeFile(this.filePath, yamlString);
+    logfile('graph', `Saved graph to ${this.filePath}, length: ${lines.length}`);
   }
 
   async createEntities(entities: Entity[]): Promise<Entity[]> {

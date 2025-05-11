@@ -1,7 +1,6 @@
 import fs from "fs";
-import * as os from "node:os";
 
-/** 检查条件是否为真，否则抛出异常 */
+// 条件断言，不满足则抛异常并记录日志
 export function checks(condition: boolean, message: string): asserts condition {
   if (!condition) {
     const err = new Error(message);
@@ -10,42 +9,50 @@ export function checks(condition: boolean, message: string): asserts condition {
   }
 }
 
-/** 检查对象 x 是否满足 typeof x[attr] === attr_string，否则抛出异常 */
+// 检查对象属性及类型
 export function checkObjHas<T>(x: unknown, key: string, valueType: string): asserts x is T {
-  if (typeof x === "object" && x !== null && key in x) {
-    const value = (x as Record<string, unknown>)[key];
-    if (typeof value !== valueType) {
-      const err = new Error(`Type check failed: ${key} is not ${valueType}`);
-      logfileE('Type check failed', err);
-      throw err;
-    }
+  if (
+    typeof x !== "object" ||
+    x === null ||
+    !(key in x) ||
+    typeof (x as Record<string, unknown>)[key] !== valueType
+  ) {
+    const err = new Error(`Type check failed: ${key} is not ${valueType}`);
+    logfileE('checkObjHas', err);
+    throw err;
   }
 }
 
+// 日志相关
+let logConsole: Console = console;
 
-/** info 级别日志 */
 export function logfile(componentName: string, ...args: unknown[]) {
   logConsole.log(componentName, ...args);
 }
 
-/** verbose 级别日志 */
 export function logfileV(componentName: string, ...args: unknown[]) {
   logConsole.log(componentName, ...args);
 }
 
-/** error 日志 */
 export function logfileE(componentName: string, error: unknown, ...args: unknown[]) {
   logConsole.error(componentName, error, ...args);
 }
 
-const logConsole = createTmpConsoleOutput();
-
-/** 创建日志文件于 /tmp/mcp-server-memories-off-log-YYYY-MM-DD.log */
-function createTmpConsoleOutput(): Console {
+// 设置日志输出文件
+export function setLogOutputFile(dir: string) {
   const date = new Date().toISOString().split("T")[0];
-  const logFileName = `mcp-server-memories-off-log-${date}.log`;
-  const tmpDir = os.tmpdir();
-  const logFilePath = `${tmpDir}/${logFileName}`;
-  console.error('mcp-server-memories-off log file is at', logFilePath);
-  return new console.Console(fs.createWriteStream(logFilePath));
+  const file = `${dir}/mcp-server-memories-off-log-${date}.log`;
+  console.error('mcp-server-memories-off log file is at', file);
+  logConsole = new console.Console(fs.createWriteStream(file));
+}
+
+// 获取环境变量，未设置则返回默认值并记录
+export function getEnvVar(key: string, def: string): string {
+  const val = process.env[key];
+  if (val === undefined) {
+    logfile('utils', `Env ${key} not set, using default: ${def}`);
+    return def;
+  }
+  logfile('utils', `Env ${key}: ${val}`);
+  return val;
 }
