@@ -5,9 +5,9 @@ import {checkObjHas, checks, logfile, logfileE} from "./utils.ts";
 import YAML from 'yaml'
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph
-export class KnowledgeGraphManager {
+export class GraphManager {
 
-  private filePath: string;
+  private readonly filePath: string;
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -53,7 +53,7 @@ export class KnowledgeGraphManager {
     ];
     const yamlString = YAML.stringify(lines);
     fs.writeFileSync(this.filePath, yamlString);
-    logfile('graph', `Saved graph to ${this.filePath}, length: ${lines.length}`);
+    logfile('graph', `Saved graph to ${this.filePath}, items count: ${lines.length}`);
   }
 
   createEntities(entities: Entity[]): Entity[] {
@@ -205,7 +205,7 @@ export class KnowledgeGraphManager {
     }
   }
 
-  readSubgraph(names: string[]) {
+  readSubgraph(names: string[]): { entities: Entity[]; relations: Relation[] } {
     const graph = this.loadGraph();
 
     logfile('graph', `Reading subgraph for entities: ${names.join(', ')}`);
@@ -292,7 +292,10 @@ export class KnowledgeGraphManager {
     };
   }
 
-  mergeEntityTypes(argMergingEntityTypes: string[], argTargetEntityType: string) {
+  mergeEntityTypes(argMergingEntityTypes: string[], argTargetEntityType: string): {
+    originalEntitiesCount: number,
+    mergedEntitiesCount: number,
+  } {
 
     logfile('graph', `Merging entity types: ${argMergingEntityTypes.join(', ')} -> ${argTargetEntityType}`);
 
@@ -346,7 +349,7 @@ export class KnowledgeGraphManager {
   }
 
   // 返回 {type_name, entity_count}
-  listEntityTypes() {
+  listEntityTypes(): {type: string, count: number}[] {
 
     const graph = this.loadGraph();
 
