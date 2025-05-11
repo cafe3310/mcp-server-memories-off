@@ -132,21 +132,25 @@ export class KnowledgeGraphManager {
   searchNodes(query: string): KnowledgeGraph {
     const graph = this.loadGraph();
 
-    // Filter entities
+    // 将 query 用空格分割成多个关键词
+    const keywords = query.split(/\s+/).map(k => k.toLowerCase());
+
+    // 过滤实体。如果实体 name, entityType, observation 中包含任意一个关键词，则保留该实体
     const filteredEntities = graph.entities.filter(e =>
-      e.name.toLowerCase().includes(query.toLowerCase()) ||
-            e.entityType.toLowerCase().includes(query.toLowerCase()) ||
-            e.observations.some(o => o.toLowerCase().includes(query.toLowerCase()))
+      keywords.some(k => e.name.toLowerCase().includes(k) ||
+            e.entityType.toLowerCase().includes(k) ||
+            e.observations.some(o => o.toLowerCase().includes(k)))
     );
 
-    // Create a Set of filtered entity names for quick lookup
+    // 创建一个 Set，用于快速查找过滤后的实体名称
     const filteredEntityNames = new Set(filteredEntities.map(e => e.name));
 
-    // Filter relations to only include those between filtered entities
+    // 过滤关系。如果关系的 from 和 to 都在过滤后的实体中，保留该关系
     const filteredRelations = graph.relations.filter(r =>
       filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)
     );
 
+    // 返回过滤后的节点
     return {
       entities: filteredEntities,
       relations: filteredRelations,
@@ -197,7 +201,7 @@ export class KnowledgeGraphManager {
       logfile('graph', `备份创建成功: ${backupFile}`);
       return backupFile;
     } catch (error) {
-      throw new Error(`创建备份时出错: ${error}`);
+      throw new Error(`创建备份时出错`, {cause: error});
     }
   }
 }

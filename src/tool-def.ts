@@ -270,7 +270,7 @@ toolDef['read_graph'] = {
 // region search_nodes
 
 export const SearchNodesInputSchema = z.object({
-  query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容"),
+  query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容，空格将视为 or 操作符"),
 }).required({query: true});
 
 toolDef['search_nodes'] = {
