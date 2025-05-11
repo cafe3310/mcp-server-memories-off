@@ -291,6 +291,75 @@ export class KnowledgeGraphManager {
       relations: Array.from(resultRelations),
     };
   }
+
+  mergeEntityTypes(argMergingEntityTypes: string[], argTargetEntityType: string) {
+
+    logfile('graph', `Merging entity types: ${argMergingEntityTypes.join(', ')} -> ${argTargetEntityType}`);
+
+    const graph = this.loadGraph();
+
+    logfile('graph', `Initial entity count: ${graph.entities.length}`);
+
+    // 1. 过滤出要合并的实体
+    const mergingEntities = graph.entities.filter(e => argMergingEntityTypes.includes(e.entityType));
+
+    // 记录要过滤的实体数量和他们的（名字，类型）
+    logfile('graph', `Merging entities count: ${mergingEntities.length}`);
+    mergingEntities.forEach(e => {
+      logfile('graph', `Merging entity: ${e.name}, type: ${e.entityType}`);
+    });
+
+    const mergedEntities: Record<string, Entity> = {};
+
+    // 2. 遍历要合并的实体，复制一份，修改类型为目标类型
+    mergingEntities.forEach(e => {
+      const newEntity = {...e, entityType: argTargetEntityType};
+      if (mergedEntities[newEntity.name]) {
+        const existingEntity = mergedEntities[newEntity.name]!;
+        existingEntity.observations.push(...newEntity.observations);
+      } else {
+        mergedEntities[newEntity.name] = newEntity;
+      }
+    });
+
+    // 记录合并后的实体数量和他们的（名字，类型）
+    logfile('graph', `Merged entities count: ${Object.keys(mergedEntities).length}`);
+    Object.values(mergedEntities).forEach(e => {
+      logfile('graph', `Merged entity: ${e.name}, type: ${e.entityType}`);
+    });
+
+    // 从 graph 中删除要合并的实体
+    graph.entities = graph.entities.filter(e => !mergingEntities.includes(e));
+
+    // 将合并后的实体添加到 graph 中
+    Object.values(mergedEntities).forEach(e => {
+      graph.entities.push(e);
+    });
+
+    // 3. 保存图
+    this.saveGraph(graph);
+
+    return {
+      originalEntitiesCount: mergingEntities.length,
+      mergedEntitiesCount: Object.keys(mergedEntities).length,
+    }
+  }
+
+  // 返回 {type_name, entity_count}
+  listEntityTypes() {
+
+    const graph = this.loadGraph();
+
+    // 1. 统计每种类型的实体数量
+    const entityTypeCount: Record<string, number> = {};
+    graph.entities.forEach(e => {
+      if (e.entityType) {
+        entityTypeCount[e.entityType] = (entityTypeCount[e.entityType] ?? 0) + 1;
+      }
+    });
+
+    // 2. 返回结果
+    return Object.entries(entityTypeCount).map(([type, count]) => ({type, count}));
+
+  }
 }
-
-
