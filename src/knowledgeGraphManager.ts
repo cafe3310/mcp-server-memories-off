@@ -204,4 +204,93 @@ export class KnowledgeGraphManager {
       throw new Error(`创建备份时出错`, {cause: error});
     }
   }
+
+  readSubgraph(names: string[]) {
+    const graph = this.loadGraph();
+
+    logfile('graph', `Reading subgraph for entities: ${names.join(', ')}`);
+    logfile('graph', `Entity map size: ${graph.entities.length}`);
+    logfile('graph', `Relation map size: ${graph.relations.length}`);
+
+    // 生成 Record<entityName, Entity> 用于快速查找
+    const entityMap: Record<string, Entity> = {};
+    graph.entities.forEach(e => {
+      if (e.name) {
+        entityMap[e.name] = e;
+      }
+    });
+
+    // 生成 Record<entityName, Relation[]> 用于快速查找
+    const relationMap: Record<string, Set<Relation>> = {};
+    graph.relations.forEach(r => {
+      if (r.from && r.to) {
+        relationMap[r.from] ??= new Set();
+        relationMap[r.from]!.add(r);
+        relationMap[r.to] ??= new Set();
+        relationMap[r.to]!.add(r);
+      }
+    });
+
+    const resultEntities: Record<string, Entity> = {};
+    const resultRelations: Set<Relation> = new Set<Relation>();
+
+    // 从 relationMap 找到所有与 resultEntities 实体相关的关系，添加到 resultRelations 中，
+    // 同时将关系两头的实体都添加到 resultEntities 中，直到没有新的实体可以添加。
+    // 用一个队列来存储待处理的实体。
+
+    // 1. 初始化队列和 visited 集合（代表该实体已经在 resultEntities 中，它的所有关系都已经添加到 resultRelations 中）
+    const queue: string[] = names.slice();
+    const visited: Set<string> = new Set<string>();
+
+    logfile('graph', `1. Initial entities count: ${names.length}`);
+
+    // 2. 依次处理队列中「不在 visited set 中」的实体，直到队列为空
+    while (queue.length > 0) {
+      const entityName = queue.shift()!;
+      if (visited.has(entityName)) {
+        logfile('graph', `2. Entity ${entityName} already visited, skipping`);
+        continue;
+      }
+      logfile('graph', `2. Processing entity: ${entityName}`);
+      visited.add(entityName);
+
+      // 3. 如果该实体在 entityMap 中，则将其添加到 resultEntities 中
+      if (entityMap[entityName]) {
+        resultEntities[entityName] = entityMap[entityName];
+        logfile('graph', `3. Added entity: ${entityName}`);
+      }
+
+      // 4. 如果该实体在 relationMap 中，则将其所有关系添加到 resultRelations 中
+      if (relationMap[entityName]) {
+        let pushedEntities = 0;
+        for (const relation of relationMap[entityName]) {
+          resultRelations.add(relation);
+          // 5. 将关系两头的实体添加到队列中（如果它们不在 visited set 中）
+          if (relation.from !== entityName && !visited.has(relation.from)) {
+            queue.push(relation.from);
+            pushedEntities++;
+          }
+          if (relation.to !== entityName && !visited.has(relation.to)) {
+            queue.push(relation.to);
+            pushedEntities++;
+          }
+        }
+        logfile('graph', `4. Added ${relationMap[entityName].size} relations for entity: ${entityName}`);
+        logfile('graph', `5. Pushed ${pushedEntities} new entities to queue`);
+      }
+
+      logfile('graph', `6. Queue size: ${queue.length}`);
+    }
+
+    // 6. 返回最终结果
+    logfile('graph', `7. Final entities count: ${Object.keys(resultEntities).length}`);
+    logfile('graph', `8. Final relations count: ${resultRelations.size}`);
+
+    return {
+      entities: Object.values(resultEntities),
+      relations: Array.from(resultRelations),
+    };
+  }
 }
+
+
