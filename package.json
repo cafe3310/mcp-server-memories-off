@@ -1,6 +1,6 @@
 {
   "name": "@alipay/mcp-server-memories-off",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "remember this and that",
   "bin": {
     "mcp-server-memories-off": "dist/index.js"
