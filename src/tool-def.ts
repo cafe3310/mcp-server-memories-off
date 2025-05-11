@@ -371,33 +371,31 @@ export const ReadSubgraphInputSchema = z.object({
   nodes: z.array(z.string().describe("要读取的实体名称列表")),
 });
 
-// 列出以 nodes 为主要节点的子图。
-//
-// toolDef['read_subgraph'] = {
-//   toolType: {
-//     name: "read_subgraph",
-//     description: "从知识图谱获取包含指定实体节点的子图，返回实体和关系",
-//     annotations: {
-//       title: '读取子图',
-//       readOnlyHint: true,
-//       destructiveHint: false,
-//       idempotentHint: true,
-//       openWorldHint: true,
-//     },
-//     inputSchema: zodToJsonSchema(ReadSubgraphInputSchema) as ToolInputSchemaType,
-//   },
-//   handler: (knowledgeGraphManager, args) => {
-//     const parsedArgs = ReadSubgraphInputSchema.parse(args);
-//     const argNodes = parsedArgs.nodes;
-//     const ret = knowledgeGraphManager.readSubgraph(argNodes);
-//     return {
-//       content: [{
-//         type: "text",
-//         text: YAML.stringify(ret),
-//       }]
-//     };
-//   },
-// };
+toolDef['read_subgraph'] = {
+  toolType: {
+    name: "read_subgraph",
+    description: "从知识图谱获取包含指定实体节点的子图，返回实体和关系",
+    annotations: {
+      title: '读取子图',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(ReadSubgraphInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = ReadSubgraphInputSchema.parse(args);
+    const argNodes = parsedArgs.nodes;
+    const ret = knowledgeGraphManager.readSubgraph(argNodes);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
 
 
 // endregion
