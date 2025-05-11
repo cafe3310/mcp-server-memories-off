@@ -1,6 +1,6 @@
 import type {Entity, KnowledgeGraph, Relation} from "./typings.ts";
-import {promises as fs} from "fs";
-import * as path from "node:path";
+import * as fs from "fs";
+import * as path from "path";
 import {checkObjHas, checks, logfile, logfileE} from "./utils.ts";
 import YAML from 'yaml'
 
@@ -14,9 +14,9 @@ export class KnowledgeGraphManager {
     checks(path.isAbsolute(this.filePath), `filePath must be an absolute path, but got ${this.filePath}`);
   }
 
-  private async loadGraph(): Promise<KnowledgeGraph> {
+  private loadGraph(): KnowledgeGraph {
     try {
-      const data = await fs.readFile(this.filePath, "utf-8");
+      const data = fs.readFileSync(this.filePath, "utf-8");
 
       logfile('graph', `Loaded graph from ${this.filePath}, length: ${data.length}`);
 
@@ -46,41 +46,41 @@ export class KnowledgeGraphManager {
     }
   }
 
-  private async saveGraph(graph: KnowledgeGraph): Promise<void> {
+  private saveGraph(graph: KnowledgeGraph): void {
     const lines = [
       ...graph.entities.map(e => ({type: "entity", ...e})),
       ...graph.relations.map(r => ({type: "relation", ...r})),
     ];
     const yamlString = YAML.stringify(lines);
-    await fs.writeFile(this.filePath, yamlString);
+    fs.writeFileSync(this.filePath, yamlString);
     logfile('graph', `Saved graph to ${this.filePath}, length: ${lines.length}`);
   }
 
-  async createEntities(entities: Entity[]): Promise<Entity[]> {
-    const graph = await this.loadGraph();
+  createEntities(entities: Entity[]): Entity[] {
+    const graph = this.loadGraph();
     const newEntities = entities.filter(e => !graph.entities.some(existingEntity => existingEntity.name === e.name));
     graph.entities.push(...newEntities);
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
     return newEntities;
   }
 
-  async createRelations(relations: Relation[]): Promise<Relation[]> {
-    const graph = await this.loadGraph();
+  createRelations(relations: Relation[]): Relation[] {
+    const graph = this.loadGraph();
     const newRelations = relations.filter(r => !graph.relations.some(existingRelation =>
       existingRelation.from === r.from &&
             existingRelation.to === r.to &&
             existingRelation.relationType === r.relationType
     ));
     graph.relations.push(...newRelations);
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
     return newRelations;
   }
 
-  async addObservations(observations: { entityName: string; contents: string[] }[]): Promise<{
+  addObservations(observations: { entityName: string; contents: string[] }[]): {
     entityName: string;
     addedObservations: string[]
-  }[]> {
-    const graph = await this.loadGraph();
+  }[] {
+    const graph = this.loadGraph();
     const results = observations.map(o => {
       const entity = graph.entities.find(e => e.name === o.entityName);
       if (!entity) {
@@ -90,47 +90,47 @@ export class KnowledgeGraphManager {
       entity.observations.push(...newObservations);
       return {entityName: o.entityName, addedObservations: newObservations};
     });
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
     return results;
   }
 
-  async deleteEntities(entityNames: string[]): Promise<void> {
-    const graph = await this.loadGraph();
+  deleteEntities(entityNames: string[]): void {
+    const graph = this.loadGraph();
     graph.entities = graph.entities.filter(e => !entityNames.includes(e.name));
     graph.relations = graph.relations.filter(r => !entityNames.includes(r.from) && !entityNames.includes(r.to));
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
   }
 
-  async deleteObservations(deletions: { entityName: string; observations: string[] }[]): Promise<void> {
-    const graph = await this.loadGraph();
+  deleteObservations(deletions: { entityName: string; observations: string[] }[]): void {
+    const graph = this.loadGraph();
     deletions.forEach(d => {
       const entity = graph.entities.find(e => e.name === d.entityName);
       if (entity) {
         entity.observations = entity.observations.filter(o => !d.observations.includes(o));
       }
     });
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
   }
 
-  async deleteRelations(relations: Relation[]): Promise<void> {
-    const graph = await this.loadGraph();
+  deleteRelations(relations: Relation[]): void {
+    const graph = this.loadGraph();
     graph.relations = graph.relations.filter(r => !relations.some(delRelation =>
       r.from === delRelation.from &&
             r.to === delRelation.to &&
             r.relationType === delRelation.relationType
     ));
-    await this.saveGraph(graph);
+    this.saveGraph(graph);
   }
 
-  async readGraph(): Promise<KnowledgeGraph> {
+  readGraph(): KnowledgeGraph {
     return this.loadGraph();
   }
 
   // Very basic search function
   // 搜索 entity(name, type) 和 relation(from, to)
   // 但不会搜索 relationType
-  async searchNodes(query: string): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+  searchNodes(query: string): KnowledgeGraph {
+    const graph = this.loadGraph();
 
     // Filter entities
     const filteredEntities = graph.entities.filter(e =>
@@ -153,8 +153,8 @@ export class KnowledgeGraphManager {
     };
   }
 
-  async openNodes(names: string[]): Promise<KnowledgeGraph> {
-    const graph = await this.loadGraph();
+  openNodes(names: string[]): KnowledgeGraph {
+    const graph = this.loadGraph();
 
     // Filter entities
     const filteredEntities = graph.entities.filter(e => names.includes(e.name));
@@ -171,5 +171,33 @@ export class KnowledgeGraphManager {
       entities: filteredEntities,
       relations: filteredRelations,
     };
+  }
+
+  /**
+   * 创建当前图文件的带时间戳的备份文件，保存在同一目录下。
+   * 如果原始文件不存在或备份文件已存在则抛出异常。
+   * @returns 备份文件的路径
+   */
+  backupGraph(): string {
+    const origFile = this.filePath;
+    const { dir, name } = path.parse(origFile);
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const backupFile = path.join(dir, `${name}_backup_${timestamp}.yaml`);
+
+    if (!( fs.existsSync(origFile))) {
+      throw new Error(`原始文件不存在: ${origFile}`);
+    }
+    if ( fs.existsSync(backupFile)) {
+      throw new Error(`备份文件已存在: ${backupFile}`);
+    }
+
+    logfile('graph', `正在创建备份: ${origFile} -> ${backupFile}`);
+    try {
+      fs.copyFileSync(origFile, backupFile);
+      logfile('graph', `备份创建成功: ${backupFile}`);
+      return backupFile;
+    } catch (error) {
+      throw new Error(`创建备份时出错: ${error}`);
+    }
   }
 }

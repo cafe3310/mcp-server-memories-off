@@ -19,7 +19,7 @@
   ],
   "type": "module",
   "scripts": {
-    "watch": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js --watch",
+    "watch": "bun build ./src/index.ts --target=node --outdir=dist --outfile=dist/index.js --watch",
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
     "lint": "bunx eslint ./src",
     "inspector": "bunx @modelcontextprotocol/inspector -e MEM_LOG_DIR=/Users/sipan bun dist/index.js"
