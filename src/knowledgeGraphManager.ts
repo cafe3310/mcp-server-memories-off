@@ -48,8 +48,8 @@ export class KnowledgeGraphManager {
 
   private async saveGraph(graph: KnowledgeGraph): Promise<void> {
     const lines = [
-      ...graph.entities.map(e => JSON.stringify({type: "entity", ...e})),
-      ...graph.relations.map(r => JSON.stringify({type: "relation", ...r})),
+      ...graph.entities.map(e => ({type: "entity", ...e})),
+      ...graph.relations.map(r => ({type: "relation", ...r})),
     ];
     const yamlString = YAML.stringify(lines);
     await fs.writeFile(this.filePath, yamlString);
@@ -127,6 +127,8 @@ export class KnowledgeGraphManager {
   }
 
   // Very basic search function
+  // 搜索 entity(name, type) 和 relation(from, to)
+  // 但不会搜索 relationType
   async searchNodes(query: string): Promise<KnowledgeGraph> {
     const graph = await this.loadGraph();
 
