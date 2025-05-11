@@ -397,5 +397,72 @@ toolDef['read_subgraph'] = {
   },
 };
 
+// endregion
+// region merge_entity_types
+
+// 合并实体类型，输入多个实体类型，将他们合并成一个实体类型
+// 如果合并后的实体名称已经存在，则合并他们的观察内容
+
+export const MergeEntityTypesInputSchema = z.object({
+  mergingEntityTypes: z.array(z.string().describe("要合并的实体类型列表")),
+  targetEntityType: z.string().describe("目标实体类型"),
+});
+
+toolDef['merge_entity_types'] = {
+  toolType: {
+    name: "merge_entity_types",
+    description: "合并实体类型",
+    annotations: {
+      title: '合并实体类型',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(MergeEntityTypesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = MergeEntityTypesInputSchema.parse(args);
+    const argMergingEntityTypes = parsedArgs.mergingEntityTypes;
+    const argTargetEntityType = parsedArgs.targetEntityType;
+    const ret = knowledgeGraphManager.mergeEntityTypes(argMergingEntityTypes, argTargetEntityType);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+// endregion
+
+// region list_entity_types
+
+export const ListEntityTypesInputSchema = z.object({});
+
+toolDef['list_entity_types'] = {
+  toolType: {
+    name: "list_entity_types",
+    description: "列出所有实体类型和实体数量",
+    annotations: {
+      title: '列出实体类型',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(ListEntityTypesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, _args) => {
+    const ret = knowledgeGraphManager.listEntityTypes();
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
 
 // endregion
