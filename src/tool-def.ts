@@ -11,7 +11,7 @@ type ToolResponseType = z.infer<typeof CallToolResultSchema>
 
 export const toolDef: Record<string, {
   toolType: ToolType;
-  handler: (knowledge: KnowledgeGraphManager, args: unknown) => Promise<ToolResponseType>
+  handler: (knowledge: KnowledgeGraphManager, args: unknown) => (Promise<ToolResponseType> | ToolResponseType);
 }> = {};
 
 // region create_entities
@@ -39,10 +39,10 @@ toolDef['create_entities'] = {
     },
     inputSchema: zodToJsonSchema(CreateEntitiesInputSchema) as ToolInputSchemaType,
   },
-  handler: async (graph, args) => {
+  handler: (graph, args) => {
     const parsedArgs = CreateEntitiesInputSchema.parse(args);
     const argEntities = parsedArgs.entities as Entity[];
-    const ret = await graph.createEntities(argEntities);
+    const ret =  graph.createEntities(argEntities);
     return {
       content: [{
         type: "text",
@@ -79,10 +79,10 @@ toolDef['create_relations'] = {
     },
     inputSchema: zodToJsonSchema(CreateRelationsInputSchema) as ToolInputSchemaType,
   },
-  handler: async (graph, args) => {
+  handler: (graph, args) => {
     const parsedArgs = CreateRelationsInputSchema.parse(args);
     const argRelations = parsedArgs.relations as Relation[];
-    const ret = await graph.createRelations(argRelations);
+    const ret =  graph.createRelations(argRelations);
     return {
       content: [{
         type: "text",
@@ -118,13 +118,13 @@ toolDef['add_observations'] = {
     },
     inputSchema: zodToJsonSchema(AddObservationsInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args) => {
+  handler: (knowledgeGraphManager, args) => {
     const parsedArgs = AddObservationsInputSchema.parse(args);
     const argObservations = parsedArgs.observations as {
       entityName: string;
       contents: string[]
     }[];
-    const ret = await knowledgeGraphManager.addObservations(argObservations);
+    const ret = knowledgeGraphManager.addObservations(argObservations);
     return {
       content: [{
         type: "text",
@@ -155,10 +155,10 @@ toolDef['delete_entities'] = {
     },
     inputSchema: zodToJsonSchema(DeleteEntitiesInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args: unknown) => {
+  handler: (knowledgeGraphManager, args: unknown) => {
     const parsedArgs = DeleteEntitiesInputSchema.parse(args);
     const argEntityNames = parsedArgs.entityNames;
-    await knowledgeGraphManager.deleteEntities(argEntityNames);
+    knowledgeGraphManager.deleteEntities(argEntityNames);
     return {content: [{type: "text", text: "实体删除成功"}]};
   },
 };
@@ -189,13 +189,13 @@ toolDef['delete_observations'] = {
     },
     inputSchema: zodToJsonSchema(DeleteObservationsInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args) => {
+  handler: (knowledgeGraphManager, args) => {
     const parsedArgs = DeleteObservationsInputSchema.parse(args);
     const argDeletions = parsedArgs.deletions as {
       entityName: string;
       observations: string[]
     }[];
-    await knowledgeGraphManager.deleteObservations(argDeletions);
+    knowledgeGraphManager.deleteObservations(argDeletions);
     return {content: [{type: "text", text: "观察内容删除成功"}]};
   },
 };
@@ -227,10 +227,10 @@ toolDef['delete_relations'] = {
     },
     inputSchema: zodToJsonSchema(DeleteRelationsInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args) => {
+  handler: (knowledgeGraphManager, args) => {
     const parsedArgs = DeleteRelationsInputSchema.parse(args);
     const argRelations = parsedArgs.relations as Relation[];
-    await knowledgeGraphManager.deleteRelations(argRelations);
+    knowledgeGraphManager.deleteRelations(argRelations);
     return {content: [{type: "text", text: "关系删除成功"}]};
   },
 };
@@ -254,8 +254,8 @@ toolDef['read_graph'] = {
     },
     inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, _args) => {
-    const ret = await knowledgeGraphManager.readGraph();
+  handler: (knowledgeGraphManager, _args) => {
+    const ret = knowledgeGraphManager.readGraph();
     return {
       content: [{
         type: "text",
@@ -286,10 +286,10 @@ toolDef['search_nodes'] = {
     },
     inputSchema: zodToJsonSchema(SearchNodesInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args) => {
+  handler: (knowledgeGraphManager, args) => {
     const parsedArgs = SearchNodesInputSchema.parse(args);
     const argQuery = parsedArgs.query;
-    const ret = await knowledgeGraphManager.searchNodes(argQuery);
+    const ret = knowledgeGraphManager.searchNodes(argQuery);
     return {
       content: [{
         type: "text",
@@ -320,10 +320,10 @@ toolDef['open_nodes'] = {
     },
     inputSchema: zodToJsonSchema(OpenNodesInputSchema) as ToolInputSchemaType,
   },
-  handler: async (knowledgeGraphManager, args) => {
+  handler: (knowledgeGraphManager, args) => {
     const parsedArgs = OpenNodesInputSchema.parse(args);
     const argNames = parsedArgs.names;
-    const ret = await knowledgeGraphManager.openNodes(argNames);
+    const ret = knowledgeGraphManager.openNodes(argNames);
     return {
       content: [{
         type: "text",
@@ -334,3 +334,31 @@ toolDef['open_nodes'] = {
 };
 
 // endregion
+
+// region backup_graph
+
+export const BackupGraphInputSchema = z.object({});
+
+toolDef['backup_graph'] = {
+  toolType: {
+    name: "backup_graph",
+    description: "备份知识图谱",
+    annotations: {
+      title: '备份知识图谱',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(BackupGraphInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, _args) => {
+    const ret = knowledgeGraphManager.backupGraph();
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
