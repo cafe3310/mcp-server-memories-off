@@ -23,7 +23,7 @@
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
     "lint": "bunx eslint ./src",
     "inspector": "bunx @modelcontextprotocol/inspector -e MEM_LOG_DIR=/Users/sipan bun dist/index.js",
-    "pub-patch": "bun build && npm version patch && tnpm publish"
+    "pub-patch": "bun run build && npm version patch && tnpm publish"
   },
   "repository": {
     "type": "git",
