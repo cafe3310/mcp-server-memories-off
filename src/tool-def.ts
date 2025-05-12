@@ -367,8 +367,10 @@ toolDef['backup_graph'] = {
 
 // region read_subgraph
 
+const ReadSubgraphInputSchemaMaxDepthDefault = 1;
 export const ReadSubgraphInputSchema = z.object({
-  nodes: z.array(z.string().describe("要读取的实体名称列表")),
+  nodes: z.array(z.string().describe("要读取的实体的名称列表")),
+  maxDepth: z.number().min(0).max(100).default(ReadSubgraphInputSchemaMaxDepthDefault).optional().describe("子图深度，为0时只返回实体本身，为1时返回直接关系和实体，依此类推"),
 });
 
 toolDef['read_subgraph'] = {
@@ -387,7 +389,8 @@ toolDef['read_subgraph'] = {
   handler: (knowledgeGraphManager, args) => {
     const parsedArgs = ReadSubgraphInputSchema.parse(args);
     const argNodes = parsedArgs.nodes;
-    const ret = knowledgeGraphManager.readSubgraph(argNodes);
+    const argMaxDepth = parsedArgs.maxDepth ?? ReadSubgraphInputSchemaMaxDepthDefault;
+    const ret = knowledgeGraphManager.readSubgraph(argNodes, argMaxDepth);
     return {
       content: [{
         type: "text",
