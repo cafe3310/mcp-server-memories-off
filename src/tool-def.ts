@@ -94,9 +94,9 @@ toolDef['create_relations'] = {
 
 // endregion
 
-// region add_observations
+// region upsert_observations
 
-export const AddObservationsInputSchema = z.object({
+export const UpsertObservationsInputSchema = z.object({
   observations: z.array(
     z.object({
       entityName: z.string().describe("要添加观察的实体名称"),
@@ -105,10 +105,10 @@ export const AddObservationsInputSchema = z.object({
   ),
 });
 
-toolDef['add_observations'] = {
+toolDef['upsert_observations'] = {
   toolType: {
-    name: "add_observations",
-    description: "为知识图谱中已有的实体添加新的观察内容",
+    name: "upsert_observations",
+    description: "为知识图谱中已有的实体添加观察内容",
     annotations: {
       title: '添加观察',
       readOnlyHint: false,
@@ -116,15 +116,15 @@ toolDef['add_observations'] = {
       idempotentHint: false,
       openWorldHint: true,
     },
-    inputSchema: zodToJsonSchema(AddObservationsInputSchema) as ToolInputSchemaType,
+    inputSchema: zodToJsonSchema(UpsertObservationsInputSchema) as ToolInputSchemaType,
   },
   handler: (knowledgeGraphManager, args) => {
-    const parsedArgs = AddObservationsInputSchema.parse(args);
+    const parsedArgs = UpsertObservationsInputSchema.parse(args);
     const argObservations = parsedArgs.observations as {
       entityName: string;
       contents: string[]
     }[];
-    const ret = knowledgeGraphManager.addObservations(argObservations);
+    const ret = knowledgeGraphManager.upsertObservations(argObservations);
     return {
       content: [{
         type: "text",
@@ -304,13 +304,13 @@ toolDef['search_nodes'] = {
 // region open_nodes
 
 export const OpenNodesInputSchema = z.object({
-  names: z.array(z.string().describe("要检索的实体名称列表")),
+  names: z.array(z.string().describe("实体名称列表")),
 });
 
 toolDef['open_nodes'] = {
   toolType: {
     name: "open_nodes",
-    description: "打开指定名称的节点",
+    description: "打开指定名称的实体，获取实体和他们之间的关系",
     annotations: {
       title: '打开节点',
       readOnlyHint: true,

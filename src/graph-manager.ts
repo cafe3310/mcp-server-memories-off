@@ -101,7 +101,7 @@ export class GraphManager {
     return newRelations;
   }
 
-  addObservations(observations: { entityName: string; contents: string[] }[]): {
+  upsertObservations(observations: { entityName: string; contents: string[] }[]): {
     entityName: string;
     addedObservations: string[]
   }[] {

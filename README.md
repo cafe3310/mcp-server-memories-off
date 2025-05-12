@@ -73,13 +73,13 @@ LLM:  认了 这活我还能干
 - **管理实体和关系**
   - upsert_entities(...entity): 创建多个实体
   - create_relations(...relation): 创建实体之间的关系
-  - add_observations(entity_name, ...observation): 为已有的实体添加新的观察内容
+  - upsert_observations(entity_name, ...observation): 为已有的实体添加新的观察内容
   - delete_entities(...entity_name): 删除实体
   - delete_observations(entity_name, ...observation): 删除实体中的特定观察内容
   - delete_relations(...relation): 删除实体之间的关系
 
 - **获取实体和关系信息**
-  - open_nodes(...entity_name): 打开节点，获取节点的详细信息
+  - open_nodes(...entity_name): 获取节点和其间关系
 
 - **分类管理**
   - list_entity_types(): 列出所有实体类型
@@ -100,12 +100,11 @@ LLM:  认了 这活我还能干
 - **管理实体和关系**
   - [x] create_entities -> upsert_entities: 创建或更新实体
   - [ ] create_relations -> upsert_relations: 创建或更新关系，同时让关系具备多个谓词
-  - [ ] add_observations -> upsert_observations: 创建或更新观察内容
+  - [x] add_observations -> upsert_observations: 创建或更新观察内容
   - [ ] rename_entities: 重命名实体
 
 - **获取实体和关系信息**
   - [ ] has_entities: 检查实体是否存在
-  - [ ] open_nodes -> 删除，给 read_subgraph 加入「depth=0时也可用于获取一系列节点」的描述
 
 - **分类管理**
   - [ ] add_important_types: 标记实体类型是「关键的」，创建 {type: --meta-important-type , name: type_name , observation: [] } 的实体用于记忆它们
