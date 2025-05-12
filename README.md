@@ -67,26 +67,38 @@ LLM:  认了 这活我还能干
   - [x] 支持自定义知识图谱存储路径
   - [ ] 支持自定义工具集介绍，便于多领域知识联动或用于 a2a 场景
 
+- **辅助模型工作**
+  - [ ] 提供 prompt 资源，提示工具使用的注意事项
+
 - **模糊搜索**
   - [x] 通过逗号或空格分词搜索
   - [x] read_subgraph：获取以某节点为中心的子知识图
-  - [ ] 给 read_subgraph 增加搜索深度限制以避免过大图谱
+  - [x] 给 read_subgraph 增加搜索深度限制以避免过大图谱
+  - [ ] 给 search_nodes 添加搜索特定字段的功能: entity_names, entity_types, entity_observations, entity, relation_types, relation_entities, relation, everything
   - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
 
+- **分类管理**
+  - [ ] list_keystone_types: 获取所有关键类型和解释
+  - [ ] add_keystone_types: 添加关键类型和解释
+  - [ ] remove_keystone_types: 删除关键类型和解释
+
 - **知识融合与整理**
-  - [ ] list_orphan_entities: 支持列出零散（无关系）的实体
-  - [ ] merge_entities: 合并实体
   - [x] list_all_entity_types: 列出所有实体类型
-  - [ ] list_most_entity_types: 列出最多的实体类型
   - [x] merge_entity_types: 合并实体类型
   - [ ] list_all_relation_types: 列出所有关系类型
-  - [ ] list_most_relation_types: 列出最多的关系类型
   - [ ] merge_relation_types: 合并关系类型
+  - [ ] list_most_entity_types: 列出最多的实体类型
+  - [ ] list_most_relation_types: 列出最多的关系类型
+  - [ ] list_orphan_entities: 支持列出零散（无关系）的实体
+  - [ ] merge_entities: 合并实体
 
 - **安全节约**
   - [x] 接口返回格式从 json 切换为更省 token（钱）的 yaml
   - [x] backup_graph: 备份整个图
+  - [ ] has_entities: 检查实体是否存在
+  - [ ] create_or_update_entities: 创建或更新实体
   - [ ] MEM_EDIT_LOG_DIR: 完整的变更记录日志，用于回溯历史
+  - [ ] read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回节点名称和关系
 
 - **时间线相关**
   - [ ] 给所有记录添加日期
