@@ -205,10 +205,10 @@ export class GraphManager {
     }
   }
 
-  readSubgraph(names: string[]): { entities: Entity[]; relations: Relation[] } {
+  readSubgraph(names: string[], maxDepth: number): { entities: Entity[]; relations: Relation[] } {
     const graph = this.loadGraph();
 
-    logfile('graph', `Reading subgraph for entities: ${names.join(', ')}`);
+    logfile('graph', `Reading subgraph for entities: ${names.join(', ')}, maxDepth: ${maxDepth}`);
     logfile('graph', `Entity map size: ${graph.entities.length}`);
     logfile('graph', `Relation map size: ${graph.relations.length}`);
 
@@ -239,20 +239,24 @@ export class GraphManager {
     // 用一个队列来存储待处理的实体。
 
     // 1. 初始化队列和 visited 集合（代表该实体已经在 resultEntities 中，它的所有关系都已经添加到 resultRelations 中）
-    const queue: string[] = names.slice();
-    const visited: Set<string> = new Set<string>();
+    // 队列元素包含实体名和当前深度
+    const queue: { name: string; depth: number }[] = names.map(name => ({ name, depth: 0 }));
+    const visited: Map<string, number> = new Map<string, number>(); // 记录实体名及其最小访问深度
 
     logfile('graph', `1. Initial entities count: ${names.length}`);
 
-    // 2. 依次处理队列中「不在 visited set 中」的实体，直到队列为空
     while (queue.length > 0) {
-      const entityName = queue.shift()!;
-      if (visited.has(entityName)) {
-        logfile('graph', `2. Entity ${entityName} already visited, skipping`);
+      const { name: entityName, depth } = queue.shift()!;
+      if (visited.has(entityName) && visited.get(entityName)! <= depth) {
+        logfile('graph', `2. Entity ${entityName} already visited at depth ${visited.get(entityName)}, skipping`);
         continue;
       }
-      logfile('graph', `2. Processing entity: ${entityName}`);
-      visited.add(entityName);
+      if (depth > maxDepth) {
+        logfile('graph', `2. Entity ${entityName} at depth ${depth} exceeds maxDepth, skipping`);
+        continue;
+      }
+      logfile('graph', `2. Processing entity: ${entityName} at depth ${depth}`);
+      visited.set(entityName, depth);
 
       // 3. 如果该实体在 entityMap 中，则将其添加到 resultEntities 中
       if (entityMap[entityName]) {
@@ -261,17 +265,17 @@ export class GraphManager {
       }
 
       // 4. 如果该实体在 relationMap 中，则将其所有关系添加到 resultRelations 中
-      if (relationMap[entityName]) {
+      if (relationMap[entityName] && depth < maxDepth) {
         let pushedEntities = 0;
         for (const relation of relationMap[entityName]) {
           resultRelations.add(relation);
-          // 5. 将关系两头的实体添加到队列中（如果它们不在 visited set 中）
-          if (relation.from !== entityName && !visited.has(relation.from)) {
-            queue.push(relation.from);
+          // 5. 将关系两头的实体添加到队列中（如果它们不在 visited set 中或以更大深度访问）
+          if (relation.from !== entityName && (!visited.has(relation.from) || visited.get(relation.from)! > depth + 1)) {
+            queue.push({ name: relation.from, depth: depth + 1 });
             pushedEntities++;
           }
-          if (relation.to !== entityName && !visited.has(relation.to)) {
-            queue.push(relation.to);
+          if (relation.to !== entityName && (!visited.has(relation.to) || visited.get(relation.to)! > depth + 1)) {
+            queue.push({ name: relation.to, depth: depth + 1 });
             pushedEntities++;
           }
         }
@@ -291,6 +295,7 @@ export class GraphManager {
       relations: Array.from(resultRelations),
     };
   }
+
 
   mergeEntityTypes(argMergingEntityTypes: string[], argTargetEntityType: string): {
     originalEntitiesCount: number,
