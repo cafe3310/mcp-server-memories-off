@@ -71,7 +71,7 @@ LLM:  认了 这活我还能干
 ## 已有工具
 
 - **管理实体和关系**
-  - create_entities(...entity): 创建多个实体
+  - upsert_entities(...entity): 创建多个实体
   - create_relations(...relation): 创建实体之间的关系
   - add_observations(entity_name, ...observation): 为已有的实体添加新的观察内容
   - delete_entities(...entity_name): 删除实体
@@ -98,7 +98,7 @@ LLM:  认了 这活我还能干
 ## Todolist
 
 - **管理实体和关系**
-  - [ ] create_entities -> upsert_entities: 创建或更新实体
+  - [x] create_entities -> upsert_entities: 创建或更新实体
   - [ ] create_relations -> upsert_relations: 创建或更新关系，同时让关系具备多个谓词
   - [ ] add_observations -> upsert_observations: 创建或更新观察内容
   - [ ] rename_entities: 重命名实体
