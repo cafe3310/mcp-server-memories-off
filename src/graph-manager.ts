@@ -56,12 +56,37 @@ export class GraphManager {
     logfile('graph', `Saved graph to ${this.filePath}, items count: ${lines.length}`);
   }
 
-  createEntities(entities: Entity[]): Entity[] {
+  // 如果实体已经存在，则更新实体属性（type: 不变，observations: 追加）
+  // 如果实体不存在，则添加实体
+  upsertEntities(entities: Entity[]): {
+    editedEntityNames: string[],
+    addedEntityNames: string[],
+  } {
     const graph = this.loadGraph();
-    const newEntities = entities.filter(e => !graph.entities.some(existingEntity => existingEntity.name === e.name));
-    graph.entities.push(...newEntities);
+
+    const editedEntityNames: string[] = [];
+    const addedEntityNames: string[] = [];
+
+    entities.forEach(e => {
+      if (e.name) {
+        const existingEntity = graph.entities.find(existingEntity => existingEntity.name === e.name);
+        if (existingEntity) {
+          if (e.observations) {
+            existingEntity.observations.push(...e.observations);
+          }
+          editedEntityNames.push(e.name);
+        } else {
+          // Add new entity
+          graph.entities.push(e);
+          addedEntityNames.push(e.name);
+        }
+      }
+    });
     this.saveGraph(graph);
-    return newEntities;
+    return {
+      editedEntityNames,
+      addedEntityNames,
+    };
   }
 
   createRelations(relations: Relation[]): Relation[] {

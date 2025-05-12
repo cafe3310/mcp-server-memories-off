@@ -16,7 +16,7 @@ export const toolDef: Record<string, {
 
 // region create_entities
 
-export const CreateEntitiesInputSchema = z.object({
+export const UpsertEntitiesInputSchema = z.object({
   entities: z.array(
     z.object({
       name: z.string().describe("实体名称"),
@@ -26,23 +26,23 @@ export const CreateEntitiesInputSchema = z.object({
   ),
 });
 
-toolDef['create_entities'] = {
+toolDef['upsert_entities'] = {
   toolType: {
-    name: "create_entities",
-    description: "创建多个实体到知识图谱",
+    name: "upsert_entities",
+    description: "创建或更新多个实体，保留原类型，添加观察内容",
     annotations: {
-      title: '创建实体',
+      title: '创建或更新实体',
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
       openWorldHint: true,
     },
-    inputSchema: zodToJsonSchema(CreateEntitiesInputSchema) as ToolInputSchemaType,
+    inputSchema: zodToJsonSchema(UpsertEntitiesInputSchema) as ToolInputSchemaType,
   },
   handler: (graph, args) => {
-    const parsedArgs = CreateEntitiesInputSchema.parse(args);
+    const parsedArgs = UpsertEntitiesInputSchema.parse(args);
     const argEntities = parsedArgs.entities as Entity[];
-    const ret =  graph.createEntities(argEntities);
+    const ret =  graph.upsertEntities(argEntities);
     return {
       content: [{
         type: "text",
