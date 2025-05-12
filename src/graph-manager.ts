@@ -395,4 +395,22 @@ export class GraphManager {
     return Object.entries(entityTypeCount).map(([type, count]) => ({type, count}));
 
   }
+
+  // 返回 {type_name, relation_count}
+  listRelationTypes(): {type: string, count: number}[] {
+
+    const graph = this.loadGraph();
+
+    // 1. 统计每种类型的关系数量
+    const relationTypeCount: Record<string, number> = {};
+    graph.relations.forEach(r => {
+      if (r.relationType) {
+        relationTypeCount[r.relationType] = (relationTypeCount[r.relationType] ?? 0) + 1;
+      }
+    });
+
+    // 2. 返回结果
+    return Object.entries(relationTypeCount).map(([type, count]) => ({type, count}));
+
+  }
 }

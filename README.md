@@ -114,7 +114,7 @@ LLM:  认了 这活我还能干
 - **知识融合与整理**
   - [x] list_entity_types: 列出所有实体类型
   - [x] merge_entity_types: 合并实体类型
-  - [ ] list_all_relation_types: 列出所有关系类型
+  - [x] list_relation_types: 列出所有关系类型
   - [ ] merge_relation_types: 合并关系类型
   - [ ] list_most_entity_types: 列出最多的实体类型
   - [ ] list_most_relation_types: 列出最多的关系类型

@@ -469,3 +469,33 @@ toolDef['list_entity_types'] = {
 };
 
 // endregion
+
+// region list_relation_types
+
+export const ListRelationTypesInputSchema = z.object({});
+
+toolDef['list_relation_types'] = {
+  toolType: {
+    name: "list_relation_types",
+    description: "列出所有关系类型和关系数量",
+    annotations: {
+      title: '列出关系类型',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(ListRelationTypesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, _args) => {
+    const ret = knowledgeGraphManager.listRelationTypes();
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+// endregion
