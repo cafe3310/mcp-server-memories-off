@@ -47,6 +47,15 @@ LLM:  认了 这活我还能干
 - **灵活检索**：支持通过实体名、类型、观察内容的关键词检索，让 LLM 获取长期记忆并在对话中直接使用。
 - **数据可读性与备份**：原始数据保持可读，提供简单的备份功能。
 
+目标不会包括：
+
+- **大规模知识**：保持轻量级，适合个人或小型项目使用。
+- **复杂关系**：不用把小工具整成 SQL。
+- **在线服务**：不考虑联网，数据存储在本地文件中。
+- **多用户协作**：不会考虑。
+- **权限**：不会考虑。
+- **多语言**：只考虑中文。
+
 ## 应用例子
 
 ### 个人使用场景
@@ -59,31 +68,52 @@ LLM:  认了 这活我还能干
 - **项目知识库**：小团队可用作项目级别的知识库，持续积累和管理知识，比如联合支付能力 MCP 服务，记录用户购物偏好、行为习惯等。
 - **优化 Agent 服务质量**：让你的 Agent 记住更多历史数据与业务诉求，动态调整流程或输出，如记住并优化利用支付能力 MCP 服务推销时的有效策略，提高应用场景中的转化率与满意度。
 
-## Todo List
+## 已有工具
 
-我打算逐步实现一些便利工具，如下为主要 todolist：
+- **管理实体和关系**
+  - create_entities(...entity): 创建多个实体
+  - create_relations(...relation): 创建实体之间的关系
+  - add_observations(entity_name, ...observation): 为已有的实体添加新的观察内容
+  - delete_entities(...entity_name): 删除实体
+  - delete_observations(entity_name, ...observation): 删除实体中的特定观察内容
+  - delete_relations(...relation): 删除实体之间的关系
 
-- **配置能力**
-  - [x] 支持自定义知识图谱存储路径
-  - [ ] 支持自定义工具集介绍，便于多领域知识联动或用于 a2a 场景
-
-- **辅助模型工作**
-  - [ ] 提供 prompt 资源，提示工具使用的注意事项
-
-- **模糊搜索**
-  - [x] 通过逗号或空格分词搜索
-  - [x] read_subgraph：获取以某节点为中心的子知识图
-  - [x] 给 read_subgraph 增加搜索深度限制以避免过大图谱
-  - [ ] 给 search_nodes 添加搜索特定字段的功能: entity_names, entity_types, entity_observations, entity, relation_types, relation_entities, relation, everything
-  - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
+- **获取实体和关系信息**
+  - open_nodes(...entity_name): 打开节点，获取节点的详细信息
 
 - **分类管理**
-  - [ ] list_keystone_types: 获取所有关键类型和解释
-  - [ ] add_keystone_types: 添加关键类型和解释
-  - [ ] remove_keystone_types: 删除关键类型和解释
+  - list_entity_types(): 列出所有实体类型
 
 - **知识融合与整理**
-  - [x] list_all_entity_types: 列出所有实体类型
+  - merge_entity_types(...entity_types, target_entity_type): 合并实体类型
+
+- **检索图谱**
+  - read_graph(): 获取整个知识图谱
+  - search_nodes(keywords): 根据查询字符串搜索各种节点
+  - read_subgraph(...entity_name, max_depth): 获取以某节点为中心的子知识图谱
+
+- **备份**
+  - backup_graph(): 备份整个知识图谱
+
+## Todolist
+
+- **管理实体和关系**
+  - [ ] create_entities -> upsert_entities: 创建或更新实体
+  - [ ] create_relations -> upsert_relations: 创建或更新关系，同时让关系具备多个谓词
+  - [ ] add_observations -> upsert_observations: 创建或更新观察内容
+  - [ ] rename_entities: 重命名实体
+
+- **获取实体和关系信息**
+  - [ ] has_entities: 检查实体是否存在
+  - [ ] open_nodes -> 删除，给 read_subgraph 加入「depth=0时也可用于获取一系列节点」的描述
+
+- **分类管理**
+  - [ ] add_important_types: 标记实体类型是「关键的」，创建 {type: --meta-important-type , name: type_name , observation: [] } 的实体用于记忆它们
+  - [ ] list_important_types: 列出所有关键的实体类型
+  - [ ] remove_important_types: 标记实体类型不是「关键的」
+
+- **知识融合与整理**
+  - [x] list_entity_types: 列出所有实体类型
   - [x] merge_entity_types: 合并实体类型
   - [ ] list_all_relation_types: 列出所有关系类型
   - [ ] merge_relation_types: 合并关系类型
@@ -92,17 +122,29 @@ LLM:  认了 这活我还能干
   - [ ] list_orphan_entities: 支持列出零散（无关系）的实体
   - [ ] merge_entities: 合并实体
 
-- **安全节约**
-  - [x] 接口返回格式从 json 切换为更省 token（钱）的 yaml
-  - [x] backup_graph: 备份整个图
-  - [ ] has_entities: 检查实体是否存在
-  - [ ] create_or_update_entities: 创建或更新实体
-  - [ ] MEM_EDIT_LOG_DIR: 完整的变更记录日志，用于回溯历史
+- **检索图谱**
+  - [x] 通过逗号或空格分词搜索
+  - [x] read_subgraph：获取以某节点为中心的子知识图
+  - [x] 给 read_subgraph 增加搜索深度限制以避免过大图谱
   - [ ] read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回节点名称和关系
+  - [ ] 给 search_nodes 添加搜索特定字段的功能: entity_names, entity_types, entity_tags, entity_observations, entity_everything, relation_types, relation_entities, relation_everything, everything
+  - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
+
+- **备份**
+  - [x] backup_graph: 备份整个图
+  - [ ] MEM_EDIT_LOG_DIR: 完整的变更审计日志，用于回溯历史或回滚到某个状态
 
 - **时间线相关**
   - [ ] 给所有记录添加日期
   - [ ] 给 get_entities, search_entities 等「信息获取」类工具的返回值中添加当前日期
+
+- **配置**
+  - [x] 支持自定义知识图谱存储路径
+  - [ ] 支持自定义工具集介绍，便于多领域知识联动或用于 a2a 场景
+
+- **辅助模型工作**
+  - [x] 接口返回格式从 json 切换为更省 token（钱）的 yaml
+  - [ ] 提供 prompt 资源，提示工具使用的注意事项
 
 ## 配置例子
 
