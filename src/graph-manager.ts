@@ -1,4 +1,4 @@
-import type {Entity, KnowledgeGraph, Relation} from "./typings.ts";
+import type {Entity, Guide, KnowledgeGraph, KnowledgeGraphWithoutGuides, Relation} from "./typings.ts";
 import * as fs from "fs";
 import * as path from "path";
 import {checkObjHas, checks, logfile, logfileE} from "./utils.ts";
@@ -33,14 +33,16 @@ export class GraphManager {
           graph.entities.push(item as unknown as Entity);
         } else if (item.type === 'relation') {
           graph.relations.push(item as unknown as Relation);
+        } else if (item.type === 'guide') {
+          graph.guides.push(item as unknown as Guide);
         }
         return graph;
 
-      }, {entities: [], relations: []});
+      }, {entities: [], relations: [], guides: []});
     } catch (error) {
       logfileE('graph', error, `Error loading graph from ${this.filePath}, using empty graph`);
       if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
-        return {entities: [], relations: []};
+        return {entities: [], relations: [], guides: []};
       }
       throw error;
     }
@@ -48,8 +50,30 @@ export class GraphManager {
 
   private saveGraph(graph: KnowledgeGraph): void {
     const lines = [
-      ...graph.entities.map(e => ({type: "entity", ...e})),
-      ...graph.relations.map(r => ({type: "relation", ...r})),
+      // 按 entityType, entityName 排序
+      ...graph.entities.map(e => ({type: "entity", ...e})).sort((a, b) => {
+        if (a.entityType < b.entityType) {return -1;}
+        if (a.entityType > b.entityType) {return 1;}
+        if (a.name < b.name) {return -1;}
+        if (a.name > b.name) {return 1;}
+        return 0;
+      }),
+      // 按 relationType, from, to 排序
+      ...graph.relations.map(r => ({type: "relation", ...r})).sort((a, b) => {
+        if (a.relationType < b.relationType) {return -1;}
+        if (a.relationType > b.relationType) {return 1;}
+        if (a.from < b.from) {return -1;}
+        if (a.from > b.from) {return 1;}
+        if (a.to < b.to) {return -1;}
+        if (a.to > b.to) {return 1;}
+        return 0;
+      }),
+      // 按 guideName 排序
+      ...graph.guides.map(g => ({type: "guide", ...g})).sort((a, b) => {
+        if (a.name < b.name) {return -1;}
+        if (a.name > b.name) {return 1;}
+        return 0;
+      }),
     ];
     const yamlString = YAML.stringify(lines);
     fs.writeFileSync(this.filePath, yamlString);
@@ -152,7 +176,7 @@ export class GraphManager {
   // Very basic search function
   // 搜索 entity(name, type) 和 relation(from, to)
   // 但不会搜索 relationType
-  searchNodes(query: string): KnowledgeGraph {
+  searchNodes(query: string): KnowledgeGraphWithoutGuides {
     const graph = this.loadGraph();
 
     // 将 query 用空格分割成多个关键词
@@ -180,7 +204,7 @@ export class GraphManager {
     };
   }
 
-  openNodes(names: string[]): KnowledgeGraph {
+  openNodes(names: string[]): KnowledgeGraphWithoutGuides {
     const graph = this.loadGraph();
 
     // Filter entities
@@ -468,6 +492,82 @@ export class GraphManager {
     return {
       originalRelationCount: mergingRelations.length,
       mergedRelationCount: Object.keys(mergedRelations).length,
+    }
+  }
+
+  readGraphGuides() {
+    logfile('graph', `Reading graph guides from ${this.filePath}`);
+
+    const graph = this.loadGraph();
+
+    return {
+      guides: graph.guides || [],
+      graphSize: {
+        entities: graph.entities.length,
+        relations: graph.relations.length,
+      }
+    }
+  }
+
+  putGraphGuide(guideName: string, guideDescription: string, guideTargets?: string[]): {
+    replacedGuide?: Guide,
+    updatedGuide?: Guide,
+  } {
+
+    logfile('graph', `Putting graph guide: ${guideName}, description: ${guideDescription}, targets: ${guideTargets?.join(', ')}`);
+
+    const graph = this.loadGraph();
+
+    const result: {
+      replacedGuide?: Guide,
+      updatedGuide?: Guide,
+    } = {}
+
+    const newGuide: Guide = {
+      name: guideName,
+      description: guideDescription,
+      targets: guideTargets ?? [],
+    }
+
+    const oldGuide = graph.guides?.find(g => g.name === guideName);
+
+    if (oldGuide) {
+      result.replacedGuide = {...oldGuide};
+    }
+    result.updatedGuide = {...newGuide};
+
+    if (oldGuide) {
+      oldGuide.name = newGuide.name;
+      oldGuide.description = newGuide.description;
+      oldGuide.targets = newGuide.targets;
+    } else {
+      if (!graph.guides) {
+        graph.guides = [];
+      }
+      graph.guides.push(newGuide);
+    }
+
+    this.saveGraph(graph);
+
+    return result;
+  }
+
+
+  removeGraphGuide(guideName: string): {
+    removedGuide?: Guide,
+  } {
+    logfile('graph', `Removing graph guide: ${guideName}`);
+
+    const graph = this.loadGraph();
+
+    const removedGuide = graph.guides?.find(g => g.name === guideName);
+
+    if (removedGuide) {
+      graph.guides = graph.guides.filter(g => g.name !== guideName);
+      this.saveGraph(graph);
+      return { removedGuide };
+    } else {
+      throw new Error(`Guide with name ${guideName} not found`);
     }
   }
 }

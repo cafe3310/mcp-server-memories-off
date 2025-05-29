@@ -11,7 +11,19 @@ export interface Relation {
   relationType: string;
 }
 
+export interface Guide {
+  name: string;
+  description: string;
+  targets: string[];
+}
+
 export interface KnowledgeGraph {
+  entities: Entity[];
+  relations: Relation[];
+  guides: Guide[];
+}
+
+export interface KnowledgeGraphWithoutGuides {
   entities: Entity[];
   relations: Relation[];
 }
