@@ -499,3 +499,42 @@ toolDef['list_relation_types'] = {
 };
 
 // endregion
+// region merge_relation_types
+
+// 合并关系类型，输入多个关系类型，将他们合并成一个关系类型
+// 过程中可能导致相同 from 和 to 的关系对象也被合并成一个
+// 返回受影响的关系对象 original_relation_count 和合并后的关系对象 merged_relation_count
+
+export const MergeRelationTypesInputSchema = z.object({
+  mergingRelationTypes: z.array(z.string().describe("要合并的关系类型列表")),
+  targetRelationType: z.string().describe("目标关系类型"),
+});
+
+toolDef['merge_relation_types'] = {
+  toolType: {
+    name: "merge_relation_types",
+    description: "合并关系类型",
+    annotations: {
+      title: '合并关系类型',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(MergeRelationTypesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = MergeRelationTypesInputSchema.parse(args);
+    const argMergingRelationTypes = parsedArgs.mergingRelationTypes;
+    const argTargetRelationType = parsedArgs.targetRelationType;
+    const ret = knowledgeGraphManager.mergeRelationTypes(argMergingRelationTypes, argTargetRelationType);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+// endregion
