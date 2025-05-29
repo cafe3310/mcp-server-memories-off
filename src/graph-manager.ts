@@ -413,4 +413,63 @@ export class GraphManager {
     return Object.entries(relationTypeCount).map(([type, count]) => ({type, count}));
 
   }
+
+  mergeRelationTypes(argMergingRelationTypes: string[], argTargetRelationType: string): {
+    originalRelationCount: number,
+    mergedRelationCount: number,
+  } {
+    logfile('graph', `Merging relation types: ${argMergingRelationTypes.join(', ')} -> ${argTargetRelationType}`);
+
+    const graph = this.loadGraph();
+
+    logfile('graph', `Initial relation count: ${graph.relations.length}`);
+
+    // 1. 过滤出要合并的关系
+    const mergingRelations = graph.relations.filter(r => argMergingRelationTypes.includes(r.relationType));
+
+    // 记录要过滤的关系数量和他们的（from, to, type）
+    logfile('graph', `Merging relations count: ${mergingRelations.length}`);
+    mergingRelations.forEach(r => {
+      logfile('graph', `Merging relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
+    });
+
+    // 将 b64(type):b64(from):b64(to) 作为 key
+    const mergedRelations: Record<string, Relation> = {};
+
+    // 2. 遍历要合并的关系，复制一份，修改类型为目标类型
+    mergingRelations.forEach(r => {
+      const newRelation = {...r, relationType: argTargetRelationType};
+      const key = `${Buffer.from(newRelation.relationType).toString('base64')}:${Buffer.from(newRelation.from).toString('base64')}:${Buffer.from(newRelation.to).toString('base64')}`;
+      if (mergedRelations[key]) {
+        const existingRelation = mergedRelations[key];
+        existingRelation.relationType = argTargetRelationType;
+      } else {
+        mergedRelations[key] = newRelation;
+      }
+      mergedRelations[key] = newRelation;
+    });
+
+    // 记录合并后的关系数量和他们的（from, to, type）
+    logfile('graph', `Merged relations count: ${Object.keys(mergedRelations).length}`);
+    Object.values(mergedRelations).forEach(r => {
+      logfile('graph', `Merged relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
+    });
+
+    // 从 graph 中删除要合并的关系
+    graph.relations = graph.relations.filter(r => !mergingRelations.includes(r));
+
+    // 将合并后的关系添加到 graph 中
+    Object.values(mergedRelations).forEach(r => {
+      graph.relations.push(r);
+    });
+
+    // 3. 保存图
+    this.saveGraph(graph);
+
+    // 4. 返回结果
+    return {
+      originalRelationCount: mergingRelations.length,
+      mergedRelationCount: Object.keys(mergedRelations).length,
+    }
+  }
 }
