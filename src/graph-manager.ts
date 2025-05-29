@@ -58,14 +58,15 @@ export class GraphManager {
 
   // 如果实体已经存在，则更新实体属性（type: 不变，observations: 追加）
   // 如果实体不存在，则添加实体
+  // 返回更新后的实体
   upsertEntities(entities: Entity[]): {
-    editedEntityNames: string[],
-    addedEntityNames: string[],
+    editedEntities: Entity[],
+    addedEntities: Entity[],
   } {
     const graph = this.loadGraph();
 
-    const editedEntityNames: string[] = [];
-    const addedEntityNames: string[] = [];
+    const editedEntities: Entity[] = [];
+    const addedEntities: Entity[] = [];
 
     entities.forEach(e => {
       if (e.name) {
@@ -74,49 +75,46 @@ export class GraphManager {
           if (e.observations) {
             existingEntity.observations.push(...e.observations);
           }
-          editedEntityNames.push(e.name);
+          editedEntities.push(e);
         } else {
           // Add new entity
           graph.entities.push(e);
-          addedEntityNames.push(e.name);
+          addedEntities.push(e);
         }
       }
     });
     this.saveGraph(graph);
     return {
-      editedEntityNames,
-      addedEntityNames,
+      editedEntities,
+      addedEntities,
     };
   }
 
-  createRelations(relations: Relation[]): Relation[] {
+  createRelations(relations: Relation[]): { createdRelations: Relation[] } {
     const graph = this.loadGraph();
-    const newRelations = relations.filter(r => !graph.relations.some(existingRelation =>
+    const createdRelations = relations.filter(r => !graph.relations.some(existingRelation =>
       existingRelation.from === r.from &&
             existingRelation.to === r.to &&
             existingRelation.relationType === r.relationType
     ));
-    graph.relations.push(...newRelations);
+    graph.relations.push(...createdRelations);
     this.saveGraph(graph);
-    return newRelations;
+    return { createdRelations };
   }
 
-  upsertObservations(observations: { entityName: string; contents: string[] }[]): {
-    entityName: string;
-    addedObservations: string[]
-  }[] {
+  upsertObservations(observations: { entityName: string; contents: string[] }[]): { updatedEntities: Entity[] } {
     const graph = this.loadGraph();
-    const results = observations.map(o => {
+    const updatedEntities: Entity[] = observations.map(o => {
       const entity = graph.entities.find(e => e.name === o.entityName);
       if (!entity) {
         throw new Error(`Entity with name ${o.entityName} not found`);
       }
       const newObservations = o.contents.filter(content => !entity.observations.includes(content));
       entity.observations.push(...newObservations);
-      return {entityName: o.entityName, addedObservations: newObservations};
+      return entity;
     });
     this.saveGraph(graph);
-    return results;
+    return { updatedEntities };
   }
 
   deleteEntities(entityNames: string[]): void {

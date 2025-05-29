@@ -14,7 +14,7 @@ export const toolDef: Record<string, {
   handler: (knowledge: GraphManager, args: unknown) => (Promise<ToolResponseType> | ToolResponseType);
 }> = {};
 
-// region create_entities
+// region upsert_entities
 
 export const UpsertEntitiesInputSchema = z.object({
   entities: z.array(
