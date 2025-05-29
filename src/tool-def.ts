@@ -54,7 +54,7 @@ toolDef['upsert_entities'] = {
 
 // endregion
 
-// region create_relations 创建关系
+// region create_relations
 
 export const CreateRelationsInputSchema = z.object({
   relations: z.array(
@@ -536,5 +536,102 @@ toolDef['merge_relation_types'] = {
     };
   },
 };
+
+// endregion
+// region read_graph_guides
+
+export const ReadGraphGuidesInputSchema = z.object({});
+
+toolDef['read_graph_guides'] = {
+  toolType: {
+    name: "read_graph_guides",
+    description: "读取知识图谱的所有使用建议",
+    annotations: {
+      title: '读取图谱使用建议',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(ReadGraphGuidesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, _args) => {
+    const ret = knowledgeGraphManager.readGraphGuides();
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+
+// endregion
+// region put_graph_guide
+
+export const PutGraphGuideInputSchema = z.object({
+  guideName: z.string().describe("使用建议条目的名称"),
+  guideDescription: z.string().describe("该条目的内容"),
+  guideTargets: z.array(z.string()).describe("和该条目相关的目标名称列表").optional(),
+});
+
+toolDef['put_graph_guide'] = {
+  toolType: {
+    name: "put_graph_guide",
+    description: "添加或替换知识图谱的一条使用建议",
+    annotations: {
+      title: '添加或替换图谱使用建议',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(PutGraphGuideInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = PutGraphGuideInputSchema.parse(args);
+    const ret = knowledgeGraphManager.putGraphGuide(parsedArgs.guideName, parsedArgs.guideDescription, parsedArgs.guideTargets);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+// endregion
+// region remove_graph_usage
+
+export const RemoveGraphGuideInputSchema = z.object({
+  guideName: z.string().describe("要删除的使用建议条目名称"),
+});
+
+toolDef['remove_graph_guide'] = {
+  toolType: {
+    name: "remove_graph_guide",
+    description: "删除知识图谱的一条使用建议",
+    annotations: {
+      title: '删除图谱使用建议',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(RemoveGraphGuideInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = RemoveGraphGuideInputSchema.parse(args);
+    const ret = knowledgeGraphManager.removeGraphGuide(parsedArgs.guideName);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
 
 // endregion
