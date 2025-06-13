@@ -107,9 +107,9 @@ LLM:  认了 这活我还能干
   - [ ] has_entities: 检查实体是否存在
 
 - **分类管理**
-  - [ ] add_important_types: 标记实体类型是「关键的」，创建 {type: --meta-important-type , name: type_name , observation: [] } 的实体用于记忆它们
-  - [ ] list_important_types: 列出所有关键的实体类型
-  - [ ] remove_important_types: 标记实体类型不是「关键的」
+  - [x] add_important_types: 标记实体类型是「关键的」，创建 {type: --meta-important-type , name: type_name , observation: [] } 的实体用于记忆它们
+  - [x] list_important_types: 列出所有关键的实体类型
+  - [x] remove_important_types: 标记实体类型不是「关键的」
 
 - **知识融合与整理**
   - [x] list_entity_types: 列出所有实体类型
@@ -127,6 +127,7 @@ LLM:  认了 这活我还能干
   - [x] 给 read_subgraph 增加搜索深度限制以避免过大图谱
   - [ ] read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回节点名称和关系
   - [ ] 给 search_nodes 添加搜索特定字段的功能: entity_names, entity_types, entity_tags, entity_observations, entity_everything, relation_types, relation_entities, relation_everything, everything
+  - [ ] search_nodes_brief: 简化的搜索接口，返回更少的信息(entity_name, entity_type, where_contains_keyword, entity_size)，避免 token 浪费
   - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
 
 - **备份**
