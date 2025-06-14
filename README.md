@@ -71,10 +71,10 @@ LLM:  认了 这活我还能干
 ## 已有工具
 
 - **管理实体和关系**
-  - upsert_entities(...entity): 创建多个实体
+  - upsert_entities(...entity): 创建或更新多个实体，保留原类型，添加观察内容
   - create_relations(...relation): 创建实体之间的关系
-  - upsert_observations(entity_name, ...observation): 为已有的实体添加新的观察内容
-  - delete_entities(...entity_name): 删除实体
+  - upsert_observations(entity_name, ...observation): 为已有的实体添加观察内容
+  - delete_entities(...entity_name): 删除实体及其关联关系
   - delete_observations(entity_name, ...observation): 删除实体中的特定观察内容
   - delete_relations(...relation): 删除实体之间的关系
 
@@ -82,69 +82,53 @@ LLM:  认了 这活我还能干
   - open_nodes(...entity_name): 获取节点和其间关系
 
 - **分类管理**
-  - list_entity_types(): 列出所有实体类型
+  - list_entity_types(): 列出所有实体类型和实体数量
+  - list_relation_types(): 列出所有关系类型和关系数量
 
 - **知识融合与整理**
   - merge_entity_types(...entity_types, target_entity_type): 合并实体类型
+  - merge_relation_types(...relation_types, target_relation_type): 合并关系类型
 
 - **检索图谱**
   - read_graph(): 获取整个知识图谱
-  - search_nodes(keywords): 根据查询字符串搜索各种节点
-  - read_subgraph(...entity_name, max_depth): 获取以某节点为中心的子知识图谱
+  - search_nodes(keywords): 根据查询字符串搜索各种节点（支持实体名、类型、观察内容等，空格为 or）
+  - read_subgraph(...entity_name, max_depth): 获取包含指定实体节点的子图，返回实体和关系
 
-- **备份**
+- **备份和图谱管理**
   - backup_graph(): 备份整个知识图谱
+  - read_graph_manual(): 读取知识图谱的所有使用说明
+  - put_graph_manual(name, description, ...target): 添加或替换一条使用说明
+  - remove_graph_manual(name): 删除一条使用说明
 
 ## Todolist
 
 - **管理实体和关系**
-  - [x] create_entities -> upsert_entities: 创建或更新实体
   - [ ] create_relations -> upsert_relations: 创建或更新关系，同时让关系具备多个谓词
-  - [x] add_observations -> upsert_observations: 创建或更新观察内容
-  - [ ] rename_entities: 重命名实体
+  - [ ] 中 - rename_entities: 重命名实体
 
 - **获取实体和关系信息**
-  - [ ] has_entities: 检查实体是否存在
-
-- **分类管理**
-  - [x] add_important_types: 标记实体类型是「关键的」，创建 {type: --meta-important-type , name: type_name , observation: [] } 的实体用于记忆它们
-  - [x] list_important_types: 列出所有关键的实体类型
-  - [x] remove_important_types: 标记实体类型不是「关键的」
+  - [ ] 中 - has_entities: 检查实体是否存在
 
 - **知识融合与整理**
-  - [x] list_entity_types: 列出所有实体类型
-  - [x] merge_entity_types: 合并实体类型
-  - [x] list_relation_types: 列出所有关系类型
-  - [ ] merge_relation_types: 合并关系类型
-  - [ ] list_most_entity_types: 列出最多的实体类型
-  - [ ] list_most_relation_types: 列出最多的关系类型
-  - [ ] list_orphan_entities: 支持列出零散（无关系）的实体
-  - [ ] merge_entities: 合并实体
+  - [ ] 中 - list_orphan_entities: 支持列出零散（无关系）的实体
+  - [ ] 中 - merge_entities: 合并实体
 
 - **检索图谱**
-  - [x] 通过逗号或空格分词搜索
-  - [x] read_subgraph：获取以某节点为中心的子知识图
-  - [x] 给 read_subgraph 增加搜索深度限制以避免过大图谱
-  - [ ] read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回节点名称和关系
-  - [ ] 给 search_nodes 添加搜索特定字段的功能: entity_names, entity_types, entity_tags, entity_observations, entity_everything, relation_types, relation_entities, relation_everything, everything
-  - [ ] search_nodes_brief: 简化的搜索接口，返回更少的信息(entity_name, entity_type, where_contains_keyword, entity_size)，避免 token 浪费
+  - [ ] 高 - read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回（中心节点全部信息、关系、关联节点名称和类型），避免 token 浪费
+  - [ ] 高 - search_nodes_brief: 简化的搜索接口。对名称命中的节点返回全文；对其余部分命中的节点返回较少信息(entity_name, entity_type, where_contains_keyword, entity_size)，避免 token 浪费
   - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
 
 - **备份**
-  - [x] backup_graph: 备份整个图
   - [ ] MEM_EDIT_LOG_DIR: 完整的变更审计日志，用于回溯历史或回滚到某个状态
 
-- **时间线相关**
-  - [ ] 给所有记录添加日期
-  - [ ] 给 get_entities, search_entities 等「信息获取」类工具的返回值中添加当前日期
+- **时间线记忆**
+  - [ ] 低 - 支持实体、关系、观察的“创建时间”概念
+  - [ ] 低 - 支持实体、关系、观察的“有效期”概念
+  - [ ] 低 - 支持实体、关系、观察的“深刻度”和“被用于做什么”的概念
 
 - **配置**
-  - [x] 支持自定义知识图谱存储路径
+  - [ ] 支持声明多个配置文件，用于多领域知识整理
   - [ ] 支持自定义工具集介绍，便于多领域知识联动或用于 a2a 场景
-
-- **辅助模型工作**
-  - [x] 接口返回格式从 json 切换为更省 token（钱）的 yaml
-  - [ ] 提供 prompt 资源，提示工具使用的注意事项
 
 ## 配置例子
 
