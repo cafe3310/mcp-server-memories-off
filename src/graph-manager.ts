@@ -570,4 +570,55 @@ export class GraphManager {
       throw new Error(`Manual with name ${manualName} not found`);
     }
   }
+
+  renameEntity(oldName: string, newName: string): {
+    success: boolean,
+    affectedRelationsCount?: number,
+
+  } {
+    logfile('graph', `Renaming entity: ${oldName} -> ${newName}`);
+
+    const graph = this.loadGraph();
+
+    // 1. 确认旧的实体存在。否则抛出异常
+    const existingEntity = graph.entities.find(e => e.name === oldName);
+    if (!existingEntity) {
+      throw new Error(`Entity with name ${oldName} not found`);
+    }
+
+    // 2. 确认新的实体名不冲突
+    if (graph.entities.some(e => e.name === newName)) {
+      throw new Error(`Entity with name ${newName} already exists`);
+    }
+
+    // 3. 更新实体名
+    existingEntity.name = newName;
+
+    // 4. 更新关系中的 from/to
+    let affectedRelationsCount = 0;
+    graph.relations.forEach(r => {
+      let changed = false;
+      if (r.from === oldName) {
+        r.from = newName;
+        changed = true;
+      }
+      if (r.to === oldName) {
+        r.to = newName;
+        changed = true;
+      }
+      if (changed) {
+        affectedRelationsCount++;
+      }
+    });
+
+    // 5. 保存图
+    this.saveGraph(graph);
+
+    logfile('graph', `Entity renamed successfully: ${oldName} -> ${newName}, affected relations: ${affectedRelationsCount}`);
+
+    return {
+      success: true,
+      affectedRelationsCount: affectedRelationsCount,
+    };
+  }
 }

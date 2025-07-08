@@ -635,3 +635,36 @@ toolDef['remove_graph_manual'] = {
 
 
 // endregion
+// region rename_entity
+
+export const RenameEntityInputSchema = z.object({
+  oldName: z.string().describe("要重命名的实体的旧名称"),
+  newName: z.string().describe("实体的新名称"),
+});
+
+toolDef['rename_entity'] = {
+  toolType: {
+    name: "rename_entity",
+    description: "重命名知识图谱中的实体，会更新所有相关的关系。如果新名称已存在将报错。",
+    annotations: {
+      title: '重命名实体',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(RenameEntityInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = RenameEntityInputSchema.parse(args);
+    const ret = knowledgeGraphManager.renameEntity(parsedArgs.oldName, parsedArgs.newName);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+// endregion

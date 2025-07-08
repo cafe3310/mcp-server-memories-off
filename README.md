@@ -86,6 +86,7 @@ LLM:  认了 这活我还能干
   - list_relation_types(): 列出所有关系类型和关系数量
 
 - **知识融合与整理**
+- - rename_entity(entity_name, new_entity_name): 重命名实体
   - merge_entity_types(...entity_types, target_entity_type): 合并实体类型
   - merge_relation_types(...relation_types, target_relation_type): 合并关系类型
 
@@ -104,7 +105,6 @@ LLM:  认了 这活我还能干
 
 - **管理实体和关系**
   - [ ] create_relations -> upsert_relations: 创建或更新关系，同时让关系具备多个谓词
-  - [ ] 中 - rename_entities: 重命名实体
 
 - **获取实体和关系信息**
   - [ ] 中 - has_entities: 检查实体是否存在
