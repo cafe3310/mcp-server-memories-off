@@ -276,7 +276,7 @@ export const SearchNodesAnywhereInputSchema = z.object({
 toolDef['search_nodes_anywhere'] = {
   toolType: {
     name: "search_nodes_anywhere",
-    description: "根据正则表达式节点和关系中搜索。任何部分包括详情匹配都返回完整实体。将返回大量信息，谨慎使用",
+    description: "根据正则表达式节点和关系中搜索。任何部分包括详情匹配都返回完整实体。将返回大量信息。除非用户特别要求广泛搜索，否则不要使用",
     annotations: {
       title: '全文搜索节点',
       readOnlyHint: true,
