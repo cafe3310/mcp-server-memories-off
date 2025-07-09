@@ -489,6 +489,7 @@ export class GraphManager {
     // 5. 将所有来源实体相关的关系，from/to 指向目标实体，同时避免重复关系
     graph.relations.forEach(r => {
       let updated = false;
+      let dropped = false;
       if (argMergingEntities.includes(r.from)) {
         sourceRelationsClone.push({...r});
         r.from = argTargetEntity;
@@ -512,8 +513,15 @@ export class GraphManager {
       if (duplicate) {
         logfile('graph', `Removing duplicate relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
         graph.relations = graph.relations.filter(rel => rel !== r);
+        dropped = true;
       }
-      if (updated) {
+      // 删除自指向关系 -- from 和 to 相同
+      if (r.from === r.to) {
+        logfile('graph', `Removing self-referencing relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
+        graph.relations = graph.relations.filter(rel => rel !== r);
+        dropped = true;
+      }
+      if (updated && !dropped) {
         targetRelationsClone.push({...r});
       }
     });
