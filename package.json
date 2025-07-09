@@ -1,13 +1,13 @@
 {
-  "name": "@alipay/mcp-server-memories-off",
+  "name": "mcp-server-memories-off",
   "version": "0.6.1",
   "description": "remember this and that",
   "bin": {
     "mcp-server-memories-off": "dist/index.js"
   },
-  "author": "junnan.spjn",
+  "author": "calicosp",
   "publishConfig": {
-    "registry": "https://registry.antgroup-inc.cn"
+    "access": "public"
   },
   "keywords": [
     "mcp",
@@ -22,12 +22,11 @@
     "watch": "bun build ./src/index.ts --target=node --outdir=dist --outfile=dist/index.js --watch",
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
     "lint": "bunx eslint ./src",
-    "inspector": "bunx @modelcontextprotocol/inspector -e MEM_LOG_DIR=/Users/sipan bun dist/index.js",
     "pub-patch": "bun run build && npm version patch && tnpm publish"
   },
   "repository": {
     "type": "git",
-    "url": "git@code.alipay.com:junnan.spjn/mcp-server-memories-off.git"
+    "url": "https://github.com/cafe3310/mcp-server-memories-off"
   },
   "dependencies": {
     "@eslint/js": "^9.26.0",
