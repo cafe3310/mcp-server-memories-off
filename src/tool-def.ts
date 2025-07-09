@@ -270,13 +270,13 @@ toolDef['delete_relations'] = {
 // region search_nodes_anywhere
 
 export const SearchNodesAnywhereInputSchema = z.object({
-  query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容，空格将视为 or 操作符"),
+  query: z.string().describe("搜索查询关键词，空格将视为 or 操作符"),
 });
 
 toolDef['search_nodes_anywhere'] = {
   toolType: {
     name: "search_nodes_anywhere",
-    description: "根据查询字符串，在节点和关系的任何信息中搜索",
+    description: "根据正则表达式节点和关系中搜索。任何部分包括详情匹配都返回完整实体。将返回大量信息，谨慎使用",
     annotations: {
       title: '全文搜索节点',
       readOnlyHint: true,
@@ -309,7 +309,7 @@ export const SearchNodesSmartInputSchema = z.object({
 toolDef['search_nodes_smart'] = {
   toolType: {
     name: "search_nodes_smart",
-    description: "根据查询正则表达式，智能搜索节点并返回相关信息：如果实体名称匹配，则返回全文；否则返回简要信息",
+    description: "根据正则表达式节点和关系中搜索。完整匹配名称则返回完整实体；部分匹配名称或匹配详情则返回简要信息",
     annotations: {
       title: '智能搜索节点',
       readOnlyHint: true,
@@ -342,7 +342,7 @@ export const OpenNodesInputSchema = z.object({
 toolDef['open_nodes'] = {
   toolType: {
     name: "open_nodes",
-    description: "打开指定名称的实体，获取这些实体、和这些实体之间的关系",
+    description: "打开指定名称的实体，获取这些实体详情和这些实体之间的关系",
     annotations: {
       title: '打开节点',
       readOnlyHint: true,

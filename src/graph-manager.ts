@@ -215,7 +215,15 @@ export class GraphManager {
   //  - whichPartMatched: "name" | "entityType" | "observation"
   //  - entityLength: number  (entity 总长度)
   // 以避免 token 浪费
-  searchNodesSmart(argQueryRegex: string) {
+  searchNodesSmart(argQueryRegex: string): {
+    fullyMatchedEntities: Entity[];
+    partiallyMatchedEntities: {
+      name: string;
+      entityType: string;
+      whichPartMatched: "name" | "entityType" | "observation";
+    }[];
+    relations: Relation[];
+  } {
 
     // 1. 编译正则表达式(可能是部分匹配)
     const queryRegexPartial = new RegExp(argQueryRegex, 'i');
