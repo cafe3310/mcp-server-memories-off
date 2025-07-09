@@ -176,7 +176,7 @@ export class GraphManager {
   // Very basic search function
   // 搜索 entity(name, type) 和 relation(from, to)
   // 但不会搜索 relationType
-  searchNodes(query: string): KnowledgeGraphWithoutManual {
+  searchNodesAnywhere(query: string): KnowledgeGraphWithoutManual {
     const graph = this.loadGraph();
 
     // 将 query 用空格分割成多个关键词

@@ -269,14 +269,14 @@ toolDef['read_graph'] = {
 
 // region search_nodes
 
-export const SearchNodesInputSchema = z.object({
+export const SearchNodesAnywhereInputSchema = z.object({
   query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容，空格将视为 or 操作符"),
 });
 
-toolDef['search_nodes'] = {
+toolDef['search_nodes_anywhere'] = {
   toolType: {
-    name: "search_nodes",
-    description: "根据查询字符串搜索各种节点",
+    name: "search_nodes_anywhere",
+    description: "根据查询字符串，在节点和关系的任何信息中搜索",
     annotations: {
       title: '搜索节点',
       readOnlyHint: true,
@@ -284,12 +284,12 @@ toolDef['search_nodes'] = {
       idempotentHint: true,
       openWorldHint: true,
     },
-    inputSchema: zodToJsonSchema(SearchNodesInputSchema) as ToolInputSchemaType,
+    inputSchema: zodToJsonSchema(SearchNodesAnywhereInputSchema) as ToolInputSchemaType,
   },
   handler: (knowledgeGraphManager, args) => {
-    const parsedArgs = SearchNodesInputSchema.parse(args);
+    const parsedArgs = SearchNodesAnywhereInputSchema.parse(args);
     const argQuery = parsedArgs.query;
-    const ret = knowledgeGraphManager.searchNodes(argQuery);
+    const ret = knowledgeGraphManager.searchNodesAnywhere(argQuery);
     return {
       content: [{
         type: "text",
