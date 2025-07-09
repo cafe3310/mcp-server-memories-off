@@ -433,6 +433,45 @@ toolDef['read_subgraph'] = {
 };
 
 // endregion
+// region merge_entities
+
+// 合并实体，输入多个实体名称，将他们合并到一个已经存在的实体。
+// 如果合并后的实体名称已经存在，则合并他们的观察内容和关系。
+
+export const MergeEntitiesInputSchema = z.object({
+  mergingEntities: z.array(z.string().describe("要合并的实体名称列表")),
+  targetEntity: z.string().describe("目标实体名称"),
+});
+
+toolDef['merge_entities'] = {
+  toolType: {
+    name: "merge_entities",
+    description: "合并实体到现存目标实体。保留目标实体的类型，合并观察内容和关系",
+    annotations: {
+      title: '合并实体',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(MergeEntitiesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = MergeEntitiesInputSchema.parse(args);
+    const argMergingEntities = parsedArgs.mergingEntities;
+    const argTargetEntity = parsedArgs.targetEntity;
+    const ret = knowledgeGraphManager.mergeEntities(argMergingEntities, argTargetEntity);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+
+// endregion
 // region merge_entity_types
 
 // 合并实体类型，输入多个实体类型，将他们合并成一个实体类型

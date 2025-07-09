@@ -432,6 +432,111 @@ export class GraphManager {
     };
   }
 
+  mergeEntities(argMergingEntities: string[], argTargetEntity: string): {
+    sourceEntities: Entity[],
+    sourceRelations: Relation[],
+    targetEntity: Entity,
+    targetRelations: Relation[],
+    entitiesBefore: number,
+    relationsBefore: number,
+    entitiesAfter: number,
+    relationsAfter: number,
+  } {
+
+    logfile('graph', `Merging entities: ${argMergingEntities.join(', ')} -> ${argTargetEntity}`);
+
+    // 1. 读取图
+    const graph = this.loadGraph();
+
+    const entitiesBefore = graph.entities.length;
+    const relationsBefore = graph.relations.length;
+
+    const sourceEntitiesClone: Entity[] = [];
+    const sourceRelationsClone: Relation[] = [];
+    let targetEntityClone: Entity = {} as Entity;
+    const targetRelationsClone: Relation[] = [];
+
+    // 2. 如果来源实体列表中包含目标实体，则抛出异常
+    if (argMergingEntities.includes(argTargetEntity)) {
+      throw new Error(`Target entity ${argTargetEntity} cannot be in the merging entities list`);
+    }
+
+    // 3. 找到所有来源实体，如果不存在，则抛出异常
+    const sourceEntities = graph.entities.filter(e => argMergingEntities.includes(e.name));
+    if (sourceEntities.length !== argMergingEntities.length) {
+      const foundNames = sourceEntities.map(e => e.name);
+      const notFoundNames = argMergingEntities.filter(name => !foundNames.includes(name));
+      throw new Error(`Some source entities not found: ${notFoundNames.join(', ')}`);
+    }
+
+    // 3. 找到目标实体，如果不存在，则抛出异常
+    const targetEntity = graph.entities.find(e => e.name === argTargetEntity);
+    if (!targetEntity) {
+      throw new Error(`Target entity ${argTargetEntity} not found`);
+    }
+
+    // 4. 读出所有来源实体的观察内容，添加到目标实体中，同时避免重复内容
+    sourceEntities.forEach(e => {
+      sourceEntitiesClone.push({...e});
+      e.observations.forEach(obs => {
+        if (!targetEntity.observations.includes(obs)) {
+          targetEntity.observations.push(obs);
+        }
+      });
+    });
+    targetEntityClone = {...targetEntity};
+
+    // 5. 将所有来源实体相关的关系，from/to 指向目标实体，同时避免重复关系
+    graph.relations.forEach(r => {
+      let updated = false;
+      if (argMergingEntities.includes(r.from)) {
+        sourceRelationsClone.push({...r});
+        r.from = argTargetEntity;
+        updated = true;
+      }
+      if (argMergingEntities.includes(r.to)) {
+        sourceRelationsClone.push({...r});
+        r.to = argTargetEntity;
+        updated = true;
+      }
+      if (updated) {
+        logfile('graph', `Updated relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
+      }
+      // 删除重复关系 -- 找到「另一个完全相同的」关系。如果能找到，删除自己。
+      const duplicate = graph.relations.find(other =>
+        other !== r &&
+                other.from === r.from &&
+                other.to === r.to &&
+                other.relationType === r.relationType
+      );
+      if (duplicate) {
+        logfile('graph', `Removing duplicate relation: ${r.from} -> ${r.to}, type: ${r.relationType}`);
+        graph.relations = graph.relations.filter(rel => rel !== r);
+      }
+      if (updated) {
+        targetRelationsClone.push({...r});
+      }
+    });
+
+    // 6. 删除所有来源实体
+    graph.entities = graph.entities.filter(e => !argMergingEntities.includes(e.name));
+
+    // 7. 保存图
+    const entitiesAfter = graph.entities.length;
+    const relationsAfter = graph.relations.length;
+    this.saveGraph(graph);
+
+    return {
+      sourceEntities: sourceEntitiesClone,
+      sourceRelations: sourceRelationsClone,
+      targetEntity: targetEntityClone,
+      targetRelations: targetRelationsClone,
+      entitiesBefore,
+      relationsBefore,
+      entitiesAfter,
+      relationsAfter,
+    }
+  }
 
   mergeEntityTypes(argMergingEntityTypes: string[], argTargetEntityType: string): {
     originalEntitiesCount: number,

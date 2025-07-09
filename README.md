@@ -113,7 +113,7 @@ LLM:  认了 这活我还能干
 
 - **知识融合与整理**
   - [ ] 中 - list_orphan_entities: 支持列出零散（无关系）的实体
-  - [ ] 中 - merge_entities: 合并实体
+  - [ ] 高 - merge_entities: 合并实体
 
 - **检索图谱**
   - [ ] 高 - read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回（中心节点全部信息、关系、关联节点名称和类型），避免 token 浪费
