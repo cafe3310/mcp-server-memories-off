@@ -92,7 +92,7 @@ LLM:  认了 这活我还能干
 
 - **检索图谱**
   - read_graph(): 获取整个知识图谱
-  - search_nodes(keywords): 根据查询字符串搜索各种节点（支持实体名、类型、观察内容等，空格为 or）
+  - search_nodes_anywhere(keywords): 根据查询字符串搜索各种节点（支持实体名、类型、观察内容等，空格为 or）
   - read_subgraph(...entity_name, max_depth): 获取包含指定实体节点的子图，返回实体和关系
   - has_entities(...entity_name): 检查实体是否存在
 
@@ -115,7 +115,7 @@ LLM:  认了 这活我还能干
 
 - **检索图谱**
   - [ ] 高 - read_subgraph_names: 获取以某些节点为中心的子知识图谱，仅返回（中心节点全部信息、关系、关联节点名称和类型），避免 token 浪费
-  - [ ] 高 - 🟥search_nodes_brief: 简化的搜索接口。对名称命中的节点返回全文；对其余部分命中的节点返回较少信息(entity_name, entity_type, where_contains_keyword, entity_size)，避免 token 浪费
+  - [ ] 高 - 🟥search_nodes_smart: 简化的搜索接口。对名称命中的节点返回全文；对其余部分命中的节点返回较少信息(entity_name, entity_type, where_contains_keyword, entity_size)，避免 token 浪费
   - [ ] 本地的向量搜索，使用 sqlite_vec 等轻量级 embedding 和搜索解决方案
 
 - **备份**

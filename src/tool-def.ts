@@ -310,7 +310,7 @@ export const OpenNodesInputSchema = z.object({
 toolDef['open_nodes'] = {
   toolType: {
     name: "open_nodes",
-    description: "打开指定名称的实体，获取实体和他们之间的关系",
+    description: "打开指定名称的实体，获取这些实体、和这些实体之间的关系",
     annotations: {
       title: '打开节点',
       readOnlyHint: true,
