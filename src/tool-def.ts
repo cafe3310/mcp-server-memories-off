@@ -239,35 +239,35 @@ toolDef['delete_relations'] = {
 
 // region read_graph
 
-export const ReadGraphInputSchema = z.object({});
+// export const ReadGraphInputSchema = z.object({});
 
-toolDef['read_graph'] = {
-  toolType: {
-    name: "read_graph",
-    description: "读取整个知识图谱(YAML格式)",
-    annotations: {
-      title: '读取知识图谱',
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true,
-    },
-    inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
-  },
-  handler: (knowledgeGraphManager, _args) => {
-    const ret = knowledgeGraphManager.readGraph();
-    return {
-      content: [{
-        type: "text",
-        text: YAML.stringify(ret)
-      }]
-    };
-  },
-};
+// toolDef['read_graph'] = {
+//   toolType: {
+//     name: "read_graph",
+//     description: "读取整个知识图谱(YAML格式)",
+//     annotations: {
+//       title: '读取知识图谱',
+//       readOnlyHint: true,
+//       destructiveHint: false,
+//       idempotentHint: true,
+//       openWorldHint: true,
+//     },
+//     inputSchema: zodToJsonSchema(ReadGraphInputSchema) as ToolInputSchemaType,
+//   },
+//   handler: (knowledgeGraphManager, _args) => {
+//     const ret = knowledgeGraphManager.readGraph();
+//     return {
+//       content: [{
+//         type: "text",
+//         text: YAML.stringify(ret)
+//       }]
+//     };
+//   },
+// };
 
 // endregion
 
-// region search_nodes
+// region search_nodes_anywhere
 
 export const SearchNodesAnywhereInputSchema = z.object({
   query: z.string().describe("搜索查询字符串，可匹配实体名称、实体类别或观察内容，空格将视为 or 操作符"),
@@ -278,7 +278,7 @@ toolDef['search_nodes_anywhere'] = {
     name: "search_nodes_anywhere",
     description: "根据查询字符串，在节点和关系的任何信息中搜索",
     annotations: {
-      title: '搜索节点',
+      title: '全文搜索节点',
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
@@ -300,7 +300,39 @@ toolDef['search_nodes_anywhere'] = {
 };
 
 // endregion
+// region search_nodes_smart
 
+export const SearchNodesSmartInputSchema = z.object({
+  queryRegex: z.string().describe("搜索查询关键词，是一个正则表达式"),
+});
+
+toolDef['search_nodes_smart'] = {
+  toolType: {
+    name: "search_nodes_smart",
+    description: "根据查询正则表达式，智能搜索节点并返回相关信息：如果实体名称匹配，则返回全文；否则返回简要信息",
+    annotations: {
+      title: '智能搜索节点',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(SearchNodesSmartInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = SearchNodesSmartInputSchema.parse(args);
+    const argQueryRegex = parsedArgs.queryRegex;
+    const ret = knowledgeGraphManager.searchNodesSmart(argQueryRegex);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+}
+
+// endregion
 // region open_nodes
 
 export const OpenNodesInputSchema = z.object({

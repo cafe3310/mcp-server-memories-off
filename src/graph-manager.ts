@@ -204,6 +204,87 @@ export class GraphManager {
     };
   }
 
+  // 较为智能且精简的搜索 function
+  // 检索关键词是正则表达式；
+  // 对名称完全匹配命中的 entity，或者名称部分匹配命中的 relation：返回全文；
+  // 对名称部分匹配命中、或其余信息命中的 entity，返回简洁信息。
+  //
+  // 对 entity, 较少信息包括
+  //  - name
+  //  - entityType
+  //  - whichPartMatched: "name" | "entityType" | "observation"
+  //  - entityLength: number  (entity 总长度)
+  // 以避免 token 浪费
+  searchNodesSmart(argQueryRegex: string) {
+
+    // 1. 编译正则表达式(可能是部分匹配)
+    const queryRegexPartial = new RegExp(argQueryRegex, 'i');
+    const queryRegexWhole = new RegExp(`^${argQueryRegex}$`, 'i');
+
+    // 2. 读取图
+    const graph = this.loadGraph();
+
+    // 过滤后的实体表
+    const fullyMatchedEntities: Entity[] = [];
+    const partiallyMatchedEntities: {
+      name: string;
+      entityType: string;
+      whichPartMatched: "name" | "entityType" | "observation";
+    }[] = [];
+
+    // 创建一个 Set 用于快速查找过滤后的实体名称
+    const filteredEntityNames = new Set<string>();
+
+    // 过滤实体
+    graph.entities.forEach(e => {
+      if (queryRegexWhole.test(e.name)) {
+        // 名称完全匹配，返回全文
+        fullyMatchedEntities.push(e);
+        filteredEntityNames.add(e.name);
+      } else if (queryRegexPartial.test(e.name)) {
+        // 名称部分匹配，返回简洁信息
+        partiallyMatchedEntities.push({
+          name: e.name,
+          entityType: e.entityType,
+          whichPartMatched: "name",
+        });
+        filteredEntityNames.add(e.name);
+      } else if (queryRegexPartial.test(e.entityType)) {
+        // 类型部分匹配，返回简洁信息
+        partiallyMatchedEntities.push({
+          name: e.name,
+          entityType: e.entityType,
+          whichPartMatched: "entityType",
+        });
+        filteredEntityNames.add(e.name);
+      } else if (e.observations.some(o => queryRegexPartial.test(o))) {
+        // 观察内容部分匹配，返回简洁信息
+        partiallyMatchedEntities.push({
+          name: e.name,
+          entityType: e.entityType,
+          whichPartMatched: "observation",
+        });
+        filteredEntityNames.add(e.name);
+      }
+    });
+
+    // 过滤关系。
+    // 如果关系的 from 和 to 都在过滤后的实体中，保留该关系;
+    // 或者关系的 from 或 to 名称部分匹配，保留该关系
+    const filteredRelations = graph.relations.filter(r =>
+      (filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)) ||
+            queryRegexPartial.test(r.from) ||
+            queryRegexPartial.test(r.to)
+    );
+
+    // 返回过滤后的节点
+    return {
+      fullyMatchedEntities: fullyMatchedEntities,
+      partiallyMatchedEntities: partiallyMatchedEntities,
+      relations: filteredRelations,
+    };
+  }
+
   openNodes(names: string[]): KnowledgeGraphWithoutManual {
     const graph = this.loadGraph();
 
