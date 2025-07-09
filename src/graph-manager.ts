@@ -621,4 +621,10 @@ export class GraphManager {
       affectedRelationsCount: affectedRelationsCount,
     };
   }
+
+  hasEntities(names: string[]): { existingEntities: string[] } {
+    const graph = this.loadGraph();
+    const existingEntities = graph.entities.filter(e => names.includes(e.name)).map(e => e.name);
+    return { existingEntities };
+  }
 }

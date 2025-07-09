@@ -668,3 +668,36 @@ toolDef['rename_entity'] = {
 };
 
 // endregion
+// region has_entities
+
+export const HasEntitiesInputSchema = z.object({
+  names: z.array(z.string().describe("要检查的实体名称列表")),
+});
+
+toolDef['has_entities'] = {
+  toolType: {
+    name: "has_entities",
+    description: "检查知识图谱中是否存在指定名称的实体，返回存在的实体名称列表",
+    annotations: {
+      title: '检查实体是否存在',
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    },
+    inputSchema: zodToJsonSchema(HasEntitiesInputSchema) as ToolInputSchemaType,
+  },
+  handler: (knowledgeGraphManager, args) => {
+    const parsedArgs = HasEntitiesInputSchema.parse(args);
+    const ret = knowledgeGraphManager.hasEntities(parsedArgs.names);
+    return {
+      content: [{
+        type: "text",
+        text: YAML.stringify(ret),
+      }]
+    };
+  },
+};
+
+
+// endregion
