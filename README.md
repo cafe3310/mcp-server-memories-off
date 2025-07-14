@@ -6,7 +6,8 @@
 
 该服务希望帮助个人或小型项目从日常文本、对话、项目笔记等，结构化地提取和整合实体和其间的关系，让知识的捕捉与整理变得顺畅。进而，这个服务也许能协助你搭建个性化的知识助手，在沟通、管理、项目梳理、信息整合加工等方面，以「模仿你」的形式提供帮助。
 
-初始版本基于 Anthropic 的 memory-mcp 迭代。
+其初始版本基于 [Anthropic 的 memory mcp](https://github.com/modelcontextprotocol/servers/blob/main/src/memory/README.md)。
+
 ## 特性目标
 
 - **便携轻量，本地优先**：基于本地文件，不需要部署或使用大规模在线服务，不与任何模型、服务或架构绑定。
@@ -100,6 +101,22 @@
 
 ## 配置例子
 
+该 package 已经发布在 [npmjs](https://www.npmjs.com/package/mcp-server-memories-off) , 可以在任何支持 mcp 协议的 LLM 客户端中配置：
+
+**命令行：**
+
+`npx mcp-server-memories-off`
+
+**环境变量：**
+
+| 环境变量      | 说明                         | 默认值                             |
+|---------------|------------------------------|---------------------------------|
+| MEM_NAME      | 工具名称                     | memory                          |
+| MEM_PATH      | 知识图谱存储文件路径         | $HOME/mcp-server-memories-off.yaml |
+| MEM_LOG_DIR   | 日志文件目录                 | 系统临时目录（如 \tmp\）                 |
+
+## 如何构建
+
 构建：
 
 `bun run build`
@@ -107,11 +124,3 @@
 运行：
 
 `node ..../dist/index.js`
-
-环境变量：
-
-| 环境变量      | 说明                         | 默认值                             |
-|---------------|------------------------------|---------------------------------|
-| MEM_NAME      | 工具名称                     | memory                          |
-| MEM_PATH      | 知识图谱存储文件路径         | $HOME/mcp-server-memories-off.yaml |
-| MEM_LOG_DIR   | 日志文件目录                 | 系统临时目录（如 \tmp\）                 |
