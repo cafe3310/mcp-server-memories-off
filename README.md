@@ -105,7 +105,7 @@
 
 **命令行：**
 
-`npx mcp-server-memories-off`
+`npx -y mcp-server-memories-off`
 
 **环境变量：**
 
