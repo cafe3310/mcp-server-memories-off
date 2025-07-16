@@ -115,6 +115,21 @@
 | MEM_PATH      | 知识图谱存储文件路径         | $HOME/mcp-server-memories-off.yaml |
 | MEM_LOG_DIR   | 日志文件目录                 | 系统临时目录（如 \tmp\）                 |
 
+**一个典型配置：**
+
+```json
+// in mcp.json
+{
+  // ... ...
+  "memory": {
+    "command": "npx",
+    "args": [ "-y", "mcp-server-memories-off" ],
+    "env": { "MEM_PATH": "你的路径" }
+  },
+  // ... ...
+}
+```
+
 ## 如何构建
 
 构建：
