@@ -22,9 +22,9 @@ export const UpsertEntitiesInputSchema = z.object({
       name: z.string().describe("实体名称"),
       entityType: z.string().describe("实体类型"),
       observations: z.array(z.string()).describe("对实体的观察内容列表"),
-    }),
+    }).strict('禁止创建实体时包含多余属性'),
   ),
-});
+}).strict('禁止多余属性');
 
 toolDef['upsert_entities'] = {
   toolType: {
@@ -62,9 +62,9 @@ export const CreateRelationsInputSchema = z.object({
       from: z.string().describe("关系开始的实体名称"),
       to: z.string().describe("关系结束的实体名称"),
       relationType: z.string().describe("关系类型"),
-    })
+    }).strict('禁止创建关系时包含多余属性'),
   ),
-});
+}).strict('禁止多余属性');
 
 toolDef['create_relations'] = {
   toolType: {
@@ -101,9 +101,9 @@ export const UpsertObservationsInputSchema = z.object({
     z.object({
       entityName: z.string().describe("要添加观察的实体名称"),
       contents: z.array(z.string()).describe("要添加的观察内容"),
-    })
+    }).strict('禁止添加观察时包含多余属性')
   ),
-});
+}).strict('禁止多余属性');
 
 toolDef['upsert_observations'] = {
   toolType: {
@@ -140,7 +140,7 @@ toolDef['upsert_observations'] = {
 
 export const DeleteEntitiesInputSchema = z.object({
   entityNames: z.array(z.string().describe("要删除的实体名称列表")),
-});
+}).strict('禁止多余属性');
 
 toolDef['delete_entities'] = {
   toolType: {
@@ -172,9 +172,9 @@ export const DeleteObservationsInputSchema = z.object({
     z.object({
       entityName: z.string().describe("包含观察的实体名称"),
       observations: z.array(z.string()).describe("要删除的观察列表"),
-    }),
+    }).strict('禁止删除观察时包含多余属性'),
   ),
-});
+}).strict('禁止多余属性');
 
 toolDef['delete_observations'] = {
   toolType: {
@@ -210,9 +210,9 @@ export const DeleteRelationsInputSchema = z.object({
       from: z.string().describe("关系开始的实体名称"),
       to: z.string().describe("关系结束的实体名称"),
       relationType: z.string().describe("关系类型"),
-    })
+    }).strict('禁止删除关系时包含多余属性')
   ),
-});
+}).strict('禁止多余属性');
 
 toolDef['delete_relations'] = {
   toolType: {
@@ -271,12 +271,12 @@ toolDef['delete_relations'] = {
 
 export const SearchNodesAnywhereInputSchema = z.object({
   query: z.string().describe("搜索查询关键词，不理解正则表达式。空格将视为 or 操作符"),
-});
+}).strict('禁止多余属性');
 
 toolDef['search_nodes_anywhere'] = {
   toolType: {
     name: "search_nodes_anywhere",
-    description: "根据关键词搜索实体。任意关键词在实体任意部分出现即返回完整实体，若关键词过短将返回大量可能冗余的信息。除非用户特别要求广泛搜索，否则不要使用。优先使用 search_nodes_smart",
+    description: "根据关键词搜索实体。任意关键词在实体任意部分出现即返回完整实体。本方法可能返回冗余信息，优先使用 search_nodes_smart",
     annotations: {
       title: '全文搜索节点',
       readOnlyHint: true,
@@ -304,7 +304,7 @@ toolDef['search_nodes_anywhere'] = {
 
 export const SearchNodesSmartInputSchema = z.object({
   queryRegex: z.string().describe("搜索查询关键词，是一个正则表达式"),
-});
+}).strict('禁止多余属性');
 
 toolDef['search_nodes_smart'] = {
   toolType: {
@@ -337,7 +337,7 @@ toolDef['search_nodes_smart'] = {
 
 export const OpenNodesInputSchema = z.object({
   names: z.array(z.string().describe("实体名称列表")),
-});
+}).strict('禁止多余属性');
 
 toolDef['open_nodes'] = {
   toolType: {
@@ -403,7 +403,7 @@ const ReadSubgraphInputSchemaMaxDepthDefault = 1;
 export const ReadSubgraphInputSchema = z.object({
   nodes: z.array(z.string().describe("要读取的实体的名称列表")),
   maxDepth: z.number().min(0).max(100).default(ReadSubgraphInputSchemaMaxDepthDefault).optional().describe("子图深度，为0时只返回实体本身，为1时返回直接关系和实体，依此类推"),
-});
+}).strict('禁止多余属性');
 
 toolDef['read_subgraph'] = {
   toolType: {
@@ -441,7 +441,7 @@ toolDef['read_subgraph'] = {
 export const MergeEntitiesInputSchema = z.object({
   mergingEntities: z.array(z.string().describe("要合并的实体名称列表")),
   targetEntity: z.string().describe("目标实体名称"),
-});
+}).strict('禁止多余属性');
 
 toolDef['merge_entities'] = {
   toolType: {
@@ -480,7 +480,7 @@ toolDef['merge_entities'] = {
 export const MergeEntityTypesInputSchema = z.object({
   mergingEntityTypes: z.array(z.string().describe("要合并的实体类型列表")),
   targetEntityType: z.string().describe("目标实体类型"),
-});
+}).strict('禁止多余属性');
 
 toolDef['merge_entity_types'] = {
   toolType: {
@@ -579,7 +579,7 @@ toolDef['list_relation_types'] = {
 export const MergeRelationTypesInputSchema = z.object({
   mergingRelationTypes: z.array(z.string().describe("要合并的关系类型列表")),
   targetRelationType: z.string().describe("目标关系类型"),
-});
+}).strict('禁止多余属性');
 
 toolDef['merge_relation_types'] = {
   toolType: {
@@ -645,7 +645,7 @@ export const PutGraphManualInputSchema = z.object({
   name: z.string().describe("使用说明条目的名称"),
   description: z.string().describe("该条目的内容"),
   targets: z.array(z.string()).describe("和该条目相关的目标名称列表").optional(),
-});
+}).strict('禁止多余属性');
 
 toolDef['put_graph_manual'] = {
   toolType: {
@@ -677,7 +677,7 @@ toolDef['put_graph_manual'] = {
 
 export const RemoveGraphManualInputSchema = z.object({
   name: z.string().describe("要删除的使用说明条目名称"),
-});
+}).strict('禁止多余属性');
 
 toolDef['remove_graph_manual'] = {
   toolType: {
@@ -711,7 +711,7 @@ toolDef['remove_graph_manual'] = {
 export const RenameEntityInputSchema = z.object({
   oldName: z.string().describe("要重命名的实体的旧名称"),
   newName: z.string().describe("实体的新名称"),
-});
+}).strict('禁止多余属性');
 
 toolDef['rename_entity'] = {
   toolType: {
@@ -743,7 +743,7 @@ toolDef['rename_entity'] = {
 
 export const HasEntitiesInputSchema = z.object({
   names: z.array(z.string().describe("要检查的实体名称列表")),
-});
+}).strict('禁止多余属性');
 
 toolDef['has_entities'] = {
   toolType: {
