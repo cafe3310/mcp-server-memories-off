@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-memories-off",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "description": "remember this and that",
   "bin": {
     "mcp-server-memories-off": "dist/index.js"
