@@ -303,7 +303,9 @@ toolDef['search_nodes_anywhere'] = {
 // region search_nodes_smart
 
 export const SearchNodesSmartInputSchema = z.object({
-  queryRegex: z.string().describe("搜索查询关键词，是一个正则表达式"),
+  queryRegexAnyWhere: z.string().describe("搜索查询关键词。如果传递且非空，将匹配任何位置上的文本，是一个正则表达式"),
+  queryRegexEntityType: z.string().describe("实体类型搜索查询关键词。如果传递且非空，将匹配实体类型。是一个正则表达式").optional(),
+  queryRegexObservation: z.string().describe("实体观察内容搜索查询关键词，如果传递且非空，将匹配实体观察。是一个正则表达式").optional(),
 }).strict('禁止多余属性');
 
 toolDef['search_nodes_smart'] = {
@@ -321,8 +323,10 @@ toolDef['search_nodes_smart'] = {
   },
   handler: (knowledgeGraphManager, args) => {
     const parsedArgs = SearchNodesSmartInputSchema.parse(args);
-    const argQueryRegex = parsedArgs.queryRegex;
-    const ret = knowledgeGraphManager.searchNodesSmart(argQueryRegex);
+    const argQueryRegexAnyWhere = parsedArgs.queryRegexAnyWhere;
+    const argQueryRegexEntityType = parsedArgs.queryRegexEntityType ?? '';
+    const argQueryRegexObservation = parsedArgs.queryRegexObservation ?? '';
+    const ret = knowledgeGraphManager.searchNodesSmart(argQueryRegexAnyWhere, argQueryRegexEntityType, argQueryRegexObservation);
     return {
       content: [{
         type: "text",

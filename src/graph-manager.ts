@@ -215,7 +215,7 @@ export class GraphManager {
   //  - whichPartMatched: "name" | "entityType" | "observation"
   //  - entityLength: number  (entity 总长度)
   // 以避免 token 浪费
-  searchNodesSmart(argQueryRegex: string): {
+  searchNodesSmart(argQueryRegexAnyWhere: string, argQueryRegexEntityType: string, argQueryRegexObservation: string):  {
     fullyMatchedEntities: Entity[];
     partiallyMatchedEntities: {
       name: string;
@@ -226,8 +226,14 @@ export class GraphManager {
   } {
 
     // 1. 编译正则表达式(可能是部分匹配)
-    const queryRegexPartial = new RegExp(argQueryRegex, 'i');
-    const queryRegexWhole = new RegExp(`^${argQueryRegex}$`, 'i');
+    const queryRegexPartial = argQueryRegexAnyWhere ? new RegExp(argQueryRegexAnyWhere, 'i') : undefined;
+    const queryRegexWhole = argQueryRegexAnyWhere ? new RegExp(`^${argQueryRegexAnyWhere}$`, 'i') : undefined;
+    
+    // 编译 entityType 的正则表达式
+    const queryRegexEntityType = argQueryRegexEntityType ? new RegExp(argQueryRegexEntityType, 'i') : undefined;
+    
+    // 编译 observation 的正则表达式
+    const queryRegexObservation = argQueryRegexObservation ? new RegExp(argQueryRegexObservation, 'i') : undefined;
 
     // 2. 读取图
     const graph = this.loadGraph();
@@ -245,11 +251,19 @@ export class GraphManager {
 
     // 过滤实体
     graph.entities.forEach(e => {
-      if (queryRegexWhole.test(e.name)) {
+        
+      // anywhere 的完全匹配优先级最高
+        
+      if (queryRegexWhole?.test(e.name)) {
         // 名称完全匹配，返回全文
         fullyMatchedEntities.push(e);
         filteredEntityNames.add(e.name);
-      } else if (queryRegexPartial.test(e.name)) {
+        return;
+      }
+      
+      // anywhere 的部分匹配次之
+      
+      if (queryRegexPartial?.test(e.name)) {
         // 名称部分匹配，返回简洁信息
         partiallyMatchedEntities.push({
           name: e.name,
@@ -257,7 +271,10 @@ export class GraphManager {
           whichPartMatched: "name",
         });
         filteredEntityNames.add(e.name);
-      } else if (queryRegexPartial.test(e.entityType)) {
+        return;
+      }
+      
+      if (queryRegexPartial?.test(e.entityType)) {
         // 类型部分匹配，返回简洁信息
         partiallyMatchedEntities.push({
           name: e.name,
@@ -265,7 +282,10 @@ export class GraphManager {
           whichPartMatched: "entityType",
         });
         filteredEntityNames.add(e.name);
-      } else if (e.observations.some(o => queryRegexPartial.test(o))) {
+        return;
+      }
+      
+      if (e.observations.some(o => queryRegexPartial?.test(o))) {
         // 观察内容部分匹配，返回简洁信息
         partiallyMatchedEntities.push({
           name: e.name,
@@ -273,7 +293,31 @@ export class GraphManager {
           whichPartMatched: "observation",
         });
         filteredEntityNames.add(e.name);
+        return;
       }
+      
+      // entityType 的部分匹配再次之
+      if (queryRegexEntityType?.test(e.entityType)) {
+        partiallyMatchedEntities.push({
+          name: e.name,
+          entityType: e.entityType,
+          whichPartMatched: "entityType",
+        });
+        filteredEntityNames.add(e.name);
+        return;
+      }
+      
+      // observation 的部分匹配最后
+      if (e.observations.some(o => queryRegexObservation?.test(o))) {
+        partiallyMatchedEntities.push({
+          name: e.name,
+          entityType: e.entityType,
+          whichPartMatched: "observation",
+        });
+        filteredEntityNames.add(e.name);
+        return;
+      }
+    
     });
 
     // 过滤关系。
@@ -281,8 +325,8 @@ export class GraphManager {
     // 或者关系的 from 或 to 名称部分匹配，保留该关系
     const filteredRelations = graph.relations.filter(r =>
       (filteredEntityNames.has(r.from) && filteredEntityNames.has(r.to)) ||
-            queryRegexPartial.test(r.from) ||
-            queryRegexPartial.test(r.to)
+            queryRegexPartial?.test(r.from) ||
+            queryRegexPartial?.test(r.to)
     );
 
     // 返回过滤后的节点
