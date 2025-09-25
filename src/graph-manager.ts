@@ -235,6 +235,11 @@ export class GraphManager {
     // 编译 observation 的正则表达式
     const queryRegexObservation = argQueryRegexObservation ? new RegExp(argQueryRegexObservation, 'i') : undefined;
 
+    // 如果没有任何正则表达式，抛出异常
+    if (!queryRegexPartial && !queryRegexEntityType && !queryRegexObservation) {
+      throw new Error('At least one of argQueryRegexAnyWhere, argQueryRegexEntityType, argQueryRegexObservation must be provided');
+    }
+
     // 2. 读取图
     const graph = this.loadGraph();
 
