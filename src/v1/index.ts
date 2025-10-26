@@ -2,7 +2,7 @@
 
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createServer} from "./create-server.ts";
-import {getEnvVar, logfile, logfileE, setLogOutputFile} from "./utils.ts";
+import {getEnvVar, logfile, logfileE, setLogOutputFile} from "../utils.ts";
 import os from "os";
 
 // Environment variables with defaults

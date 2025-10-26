@@ -1,7 +1,7 @@
 import type {Entity, Manual, KnowledgeGraph, KnowledgeGraphWithoutManual, Relation} from "./typings.ts";
 import * as fs from "fs";
 import * as path from "path";
-import {checkObjHas, checks, logfile, logfileE} from "./utils.ts";
+import {checkObjHas, checks, logfile, logfileE} from "../utils.ts";
 import YAML from 'yaml'
 
 // The KnowledgeGraphManager class contains all operations to interact with the knowledge graph

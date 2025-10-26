@@ -1,7 +1,7 @@
 import {GraphManager} from "./graph-manager.ts";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {CallToolRequestSchema, ListToolsRequestSchema} from "@modelcontextprotocol/sdk/types.js";
-import {logfile} from "./utils.ts";
+import {logfile} from "../utils.ts";
 import {toolDef, type ToolType} from "./tool-def.ts";
 
 export function createServer(name: string, yamlPath: string) {
