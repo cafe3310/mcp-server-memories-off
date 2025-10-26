@@ -4,6 +4,91 @@ import {getLibraryPath} from './runtime.ts';
 import {checks, logfile} from '../utils.ts';
 
 import fs from 'fs';
+import type {StrongOpaque} from "../typings.ts";
+
+// 定义一些 string variant type
+
+// 模糊匹配的章节标题。
+// 如 "installation guide"
+type TocGlob = StrongOpaque<string, 'TocGlob'>;
+
+// 精确匹配的章节标题行。
+// 如 "## Installation (Guide):"
+type TocExactLine = StrongOpaque<string, 'TocExactLine'>;
+
+// 模糊匹配的内容块，基于行。
+// 如 "this is the beginning of the section*"
+type ContentGlobLine = StrongOpaque<string, 'ContentGlobLine'>;
+
+// 精确匹配的内容块，单行。
+// 如 "  - This is the beginning of the section."
+type ContentExactLine = StrongOpaque<string, 'ContentExactLine'>;
+
+// 精确匹配的内容块，多行。
+// 如 "  - This is the beginning of the section. and\n  - this is the second line"
+type ContentExactBlock = StrongOpaque<string, 'ContentExactBlock'>;
+
+// 行号，从 1 开始计数
+type LineNumber = StrongOpaque<number, 'LineNumber'>;
+
+// 内容块
+type ContentBlock = {
+  type: 'NumbersAndLines'
+  beginLineNumber: LineNumber;
+  endLineNumber: LineNumber;
+  beginContentLine: ContentExactLine;
+  endContentLine: ContentExactLine;
+} | {
+  type: 'Lines'
+  ContentExactBlock: ContentExactBlock;
+}
+
+// TOC 块
+type TocBlock = {
+  lineNumber: LineNumber;
+  tocLineContent: TocExactLine;
+}
+
+// 我们对文件的操作基于以下范式：
+// ## toc
+//   TOC 定位章节标题，使用模糊匹配，确保唯一定位
+//   对 toc 的匹配，我们只要求提供完整的章节标题行，允许模糊匹配。具体来说，
+//   用户提供的 toc 会被标准化（小写化，去除标点符号，前后多空格去除，多空格归一化）后与文件中的所有标题行进行匹配。
+//   如果找到唯一匹配，则返回该完整标题行。
+//
+//   - matchToc(path, TocGlob): string -> TocBlock | throws
+//     如果匹配成功，返回 TocBlock，否则抛错。
+//
+// ## content
+//   我们对内容的替换基于行，和 array.shift 类似。
+//
+//   - replace(path, oldContent: ContentBlock, newContent: ContentBlock): void
+//     将文件中唯一匹配的 oldContent 替换为 newContent。
+//     如果未找到唯一匹配，则抛错。
+//
+//   - insertAfter(path, content: ContentExactBlock, afterContent: ContentGlobLine): void
+//     在文件中唯一匹配的 afterContent 之后插入 content。
+//     如果未找到唯一匹配，则抛错。
+//
+//   - insertInTocAfter(path, toc: TocGlob, content: ContentExactBlock, afterContent: ContentGlobLine): void
+//     在 toc 指定的章节下、唯一匹配的 afterContent 之后插入 content。
+//     如果 toc 未找到或不唯一，或 afterContent 未找到或不唯一，则抛错。
+//
+//   - add(path, content: ContentExactBlock): void
+//     在文件末尾添加 content。
+//
+//   - addInToc(path, toc: TocGlob, content): void
+//     在 toc 指定的章节下添加 content。
+//     如果 toc 未找到或不唯一，则抛错。
+//     content 会被添加在 toc 之后、任何新标题行之前。
+//
+//   - delete(path, content: ContentBlock): void
+//     删除文件中唯一匹配的 content。
+//     如果未找到唯一匹配，则抛错。
+//
+//   - deleteInToc(path, toc: TocGlob, content): void
+//     在 toc 指定的章节下删除唯一匹配的 content。
+//     如果 toc 未找到或不唯一，或 content 未找到或不唯一，则抛错。
 
 /**
  * Reads the full content of a file within a library.
@@ -69,7 +154,7 @@ export function matchToc(filePath: string, toc: string): string {
 
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const lines = fileContent.split('\n');
-    
+
   const headingLines = lines.filter(line => line.startsWith('#'));
   const matches = headingLines.filter(line => normalize(line).includes(normalizedToc));
 
