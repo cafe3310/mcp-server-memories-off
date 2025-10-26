@@ -20,7 +20,7 @@
   "type": "module",
   "scripts": {
     "watch": "bun build ./src/index.ts --target=node --outdir=dist --outfile=dist/index.js --watch",
-    "build": "bun build ./src/index.ts --minify --target=node --outdir=dist --outfile=dist/index.js",
+    "build": "bun build ./src/index.ts --minify --target=node --outdir=dist",
     "lint": "bunx eslint ./src",
     "pub-patch": "bun run build && npm version patch && tnpm publish"
   },
