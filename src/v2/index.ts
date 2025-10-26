@@ -22,23 +22,25 @@ export async function runV2() {
     },
   });
 
-  // Register tools
-  const allTools = { ...manualTools };
-  const toolTypes = Object.values(allTools).map(t => t.toolType);
+      // Register tools
+      const allTools: { [key: string]: any } = {};
+      for (const tool of Object.values(manualTools)) {
+          allTools[tool.toolType.name] = tool;
+      }
+      const toolTypes = Object.values(allTools).map(t => t.toolType);
+    server.setRequestHandler(ListToolsRequestSchema, () => ({
+        tools: toolTypes,
+    }));
 
-  server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: toolTypes,
-  }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    logfile('v2', `Received request: ${JSON.stringify(request)}`);
-    const { name, arguments: args } = request.params;
-    const tool = allTools[name as keyof typeof allTools];
-    if (tool?.handler) {
-      return await Promise.resolve(tool.handler(args ?? {}));
-    }
-    throw new Error(`Unknown tool: ${name}`);
-  });
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        logfile('v2', `Received request: ${JSON.stringify(request)}`);
+        const { name, arguments: args } = request.params;
+        const tool = allTools[name as keyof typeof allTools];
+        if (tool?.handler) {
+            return await Promise.resolve(tool.handler(args ?? {}));
+        }
+        throw new Error(`Unknown tool: ${name}`);
+    });
 
 
   const transport = new StdioServerTransport();

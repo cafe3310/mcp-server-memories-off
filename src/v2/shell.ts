@@ -3,6 +3,8 @@ import path from 'path';
 import { getLibraryPath } from './runtime.ts';
 import { checks, logfile } from '../utils.ts';
 
+import fs from 'fs';
+
 /**
  * Reads the full content of a file within a library.
  * @param libraryName The name of the library.
@@ -10,11 +12,11 @@ import { checks, logfile } from '../utils.ts';
  * @returns The content of the file as a string.
  */
 export function readFileContent(libraryName: string, relativePath: string): string {
-  const libraryPath = getLibraryPath(libraryName);
-  const fullPath = path.join(libraryPath, relativePath);
-  checks(shell.test('-f', fullPath), `File not found: ${fullPath}`);
-  logfile('shell', `Reading file: ${fullPath}`);
-  return shell.cat(fullPath).stdout;
+    const libraryPath = getLibraryPath(libraryName);
+    const fullPath = path.join(libraryPath, relativePath);
+    checks(shell.test('-f', fullPath), `File not found: ${fullPath}`);
+    logfile('shell', `Reading file: ${fullPath}`);
+    return fs.readFileSync(fullPath, 'utf-8');
 }
 
 /**
@@ -26,20 +28,18 @@ export function readFileContent(libraryName: string, relativePath: string): stri
  * @param oldContent The exact block of text to be replaced.
  * @param newContent The new block of text.
  */
-export function replaceFileContent(libraryName: string, relativePath: string, oldContent: string, newContent: string): void {
-  const libraryPath = getLibraryPath(libraryName);
-  const fullPath = path.join(libraryPath, relativePath);
-  checks(shell.test('-f', fullPath), `File not found: ${fullPath}`);
+export function replaceContent(libraryName: string, relativePath: string, oldContent: string, newContent: string): void {
+    const libraryPath = getLibraryPath(libraryName);
+    const fullPath = path.join(libraryPath, relativePath);
+    checks(shell.test('-f', fullPath), `File not found: ${fullPath}`);
 
-  // shell.sed is tricky with multi-line and special characters.
-  // A safer method is to read, replace in memory, and write back.
-  const originalFileContent = shell.cat(fullPath).stdout;
-  const updatedContent = originalFileContent.replace(oldContent, newContent);
+    const originalFileContent = fs.readFileSync(fullPath, 'utf-8');
+    const updatedContent = originalFileContent.replace(oldContent, newContent);
 
-  checks(originalFileContent !== updatedContent, `'oldContent' not found in file ${fullPath}. Replacement failed.`);
+    checks(originalFileContent !== updatedContent, `'oldContent' not found in file ${fullPath}. Replacement failed.`);
 
-  new shell.ShellString(updatedContent).to(fullPath);
-  logfile('shell', `Replaced content in file: ${fullPath}`);
+    fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+    logfile('shell', `Replaced content in file: ${fullPath}`);
 }
 
 /**
@@ -49,9 +49,9 @@ export function replaceFileContent(libraryName: string, relativePath: string, ol
  * @param content The content to write to the file.
  */
 export function createFile(libraryName: string, relativePath: string, content: string): void {
-  const libraryPath = getLibraryPath(libraryName);
-  const fullPath = path.join(libraryPath, relativePath);
-  checks(!shell.test('-e', fullPath), `File already exists: ${fullPath}`);
-  new shell.ShellString(content).to(fullPath);
-  logfile('shell', `Created file: ${fullPath}`);
+    const libraryPath = getLibraryPath(libraryName);
+    const fullPath = path.join(libraryPath, relativePath);
+    checks(!shell.test('-e', fullPath), `File already exists: ${fullPath}`);
+    new shell.ShellString(content).to(fullPath);
+    logfile('shell', `Created file: ${fullPath}`);
 }
