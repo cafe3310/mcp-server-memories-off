@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions,@typescript-eslint/consistent-indexed-object-style */
+// noinspection JSUnusedLocalSymbols
+
 ///////////////////////////////////////////////////////////////////////////
 // region 一些 Typing magic
 ///////////////////////////////////////////////////////////////////////////
@@ -61,3 +63,61 @@ export type WritableKeys<T> = {
 export type MatchingKeys<T, V> = {
   [K in keyof T]-?: T[K] extends V ? K : never
 }[keyof T];
+
+///////////////////////////////////////////////////////////////////////////
+// endregion
+// region 具体 typings
+///////////////////////////////////////////////////////////////////////////
+
+// 知识库名称
+export type LibraryName = WeakOpaque<string, 'LibraryName'>;
+
+// 知识库路径
+export type LibraryPath = WeakOpaque<string, 'LibraryPath'>;
+
+// 文件相对路径
+export type FileRelativePath = WeakOpaque<string, 'FileRelativePath'>;
+
+// 文件绝对路径
+export type FileAbsolutePath = WeakOpaque<string, 'FileAbsolutePath'>;
+
+// 模糊匹配的章节标题。
+// 如 "installation guide"
+export type TocGlob = WeakOpaque<string, 'TocGlob'>;
+
+// 精确匹配的章节标题行。
+// 如 "## Installation (Guide):"
+export type TocExactLine = WeakOpaque<string, 'TocExactLine'>;
+
+// 模糊匹配的内容块，基于行。
+// 如 "this is the beginning of the section*"
+export type ContentGlobLine = WeakOpaque<string, 'ContentGlobLine'>;
+
+// 精确匹配的内容块，单行。
+// 如 "  - This is the beginning of the section."
+export type ContentExactLine = WeakOpaque<string, 'ContentExactLine'>;
+
+// 精确匹配的内容块，多行。
+// 如 "  - This is the beginning of the section. and\n  - this is the second line"
+export type ContentExactBlock = WeakOpaque<string, 'ContentExactBlock'>;
+
+// 行号，从 1 开始计数
+export type LineNumber = WeakOpaque<number, 'LineNumber'>;
+
+// 内容块
+export type ContentLocator = {
+  type: 'NumbersAndLines'
+  beginLineNumber: LineNumber;
+  endLineNumber: LineNumber;
+  beginContentLine: ContentExactLine;
+  endContentLine: ContentExactLine;
+} | {
+  type: 'Lines'
+  ContentExactBlock: ContentExactBlock;
+}
+
+// TOC 块
+export type TocBlock = {
+  lineNumber: LineNumber;
+  tocLineContent: TocExactLine;
+}
