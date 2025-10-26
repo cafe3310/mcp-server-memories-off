@@ -92,3 +92,12 @@
     - **关系 (Relation)**: 包含 `from`, `to`, `relationType`。用于连接两个实体。
     - **使用说明 (Manual)**: 包含 `name`, `description`, `targets`。用于存储图谱的元信息或使用指南。
     - 存储格式为 YAML 数组，每个元素是一个实体、关系或使用说明。
+
+---
+
+### 第五部分：当前重大任务
+
+- **任务**: Shell-Native 架构重构
+- **状态**: <span style="color:orange;">进行中</span>
+- **目标**: 按照 `docs/refactored-design.md` 的蓝图，将项目重构为基于文件目录的存储和基于 Shell 命令的交互方式。
+- **进度记录**: 所有完成的重构步骤将被记录在 `docs/refactored-log.md` 文件中。
