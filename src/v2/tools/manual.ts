@@ -1,10 +1,8 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import { readFileContent, replaceContent } from '../shell.ts';
+import {matchToc, readFileContent, replaceContent} from '../shell.ts';
 import { getLibraryPath } from '../runtime.ts';
-import { checks } from '../../utils.ts';
 import YAML from 'yaml';
-import shell from 'shelljs';
 import path from 'path';
 
 // Zod schema for the readManual tool
@@ -43,36 +41,34 @@ export const updateManualSectionTool = {
   },
   handler: (args: unknown) => {
     const { libraryName, toc, oldContent, newContent } = UpdateManualSectionInputSchema.parse(args);
-    
+          
     const libraryPath = getLibraryPath(libraryName);
     const fullPath = path.join(libraryPath, 'meta.md');
-
-    // 1. Use grep to robustly check for the section heading's existence.
-    const grepResult = shell.grep(toc, fullPath);
-    if (grepResult.code !== 0 || !grepResult.stdout) {
-        throw new Error(`在 meta.md 中未找到标题为 '${toc}' 的章节。请检查章节标题是否正确，或使用 readManual 工具查看可用的章节。`);
-    }
-
-    // 2. Read the whole file and perform a direct replacement.
+  
+    // 1. Use matchToc to find the unique heading.
+    const matchedHeading = matchToc(fullPath, toc);
+    
+    // fixme 我们这里其实并没有用到 matchedHeading，后续可以改进为基于 heading 定位内容块进行替换，而不是全文替换
+    //       为此还需要定义一个比较复杂的 {content, beginline, endline} 范围匹配和替换逻辑。
+  
+    // 2. Read the whole file and perform a direct replacement. Only replace first match
     const fullContent = readFileContent(libraryName, 'meta.md');
     const updatedContent = fullContent.replace(oldContent, newContent);
-
+  
     if (fullContent === updatedContent) {
-        throw new Error(`在 meta.md 中未找到要替换的旧内容 (oldContent)。请确保 oldContent 参数与文件中的内容完全匹配。`);
+      throw new Error(`在 meta.md 中未找到要替换的旧内容 (oldContent)。请确保 oldContent 参数与文件中的内容完全匹配。`);
     }
-
+  
     // 3. Write the updated content back.
-    // Note: The 'replaceContent' function in shell.ts was modified to be a full-file replacer.
     replaceContent(libraryName, 'meta.md', fullContent, updatedContent);
-
+  
     const response = {
-        status: 'success',
-        message: `章节 '${toc}' 已在 meta.md 中更新。`,
+      status: 'success',
+      message: `章节 '${matchedHeading.substring(3).trim()}' 已在 meta.md 中更新。`,
     };
-
+  
     return { content: [{ type: 'text', text: YAML.stringify(response) }] };
-  },
-};
+  },};
 
 // Export all manual tools in a structured way
 export const manualTools = {
