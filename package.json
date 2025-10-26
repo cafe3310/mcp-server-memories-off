@@ -31,8 +31,10 @@
   "dependencies": {
     "@eslint/js": "^9.26.0",
     "@modelcontextprotocol/sdk": "1.0.1",
+    "shelljs": "^0.10.0",
     "typescript-eslint": "^8.32.0",
     "yaml": "^2.7.1",
+    "yargs": "^18.0.0",
     "zod": "^3.24.4",
     "zod-to-json-schema": "^3.24.5"
   },
@@ -40,6 +42,8 @@
     "@stylistic/eslint-plugin": "^4.2.0",
     "@types/bun": "latest",
     "@types/node": "^22",
+    "@types/shelljs": "^0.8.17",
+    "@types/yargs": "^17.0.34",
     "eslint": "^9.26.0"
   },
   "peerDependencies": {
