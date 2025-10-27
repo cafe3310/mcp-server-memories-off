@@ -11,7 +11,8 @@ import type {
   FileRelativePath,
   FileWholeLines,
   LibraryName,
-  LibraryPath, LineNumber,
+  LibraryPath,
+  LineNumber,
   TocGlob,
   TocItem,
   TocList
@@ -206,7 +207,7 @@ export function insertAfter(libraryName: LibraryName, relativePath: FileRelative
 //     在 toc 指定的章节下、唯一匹配的 afterContent 之后插入 content。
 //     如果 toc 未找到或不唯一，或 afterContent 未找到或不唯一，则抛错。
 //
-export function insertInTocAfterTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], afterContent: ContentExactLine[]): void {
+export function insertInTocAfter(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], afterContent: ContentExactLine[]): void {
 
   // 1. 读取文件内容
   const lines = readFileLines(libraryName, relativePath);
@@ -257,7 +258,7 @@ export function add(libraryName: LibraryName, relativePath: FileRelativePath, co
 //     如果 toc 未找到或不唯一，则抛错。
 //     content 会被添加在 toc 之后、任何新标题行之前。
 //
-export function addInTocTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
+export function addInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
 
   // 1. 读取文件内容
   const lines = readFileLines(libraryName, relativePath);
@@ -306,7 +307,7 @@ export function deleteContent(libraryName: LibraryName, relativePath: FileRelati
 //   - deleteInToc(path, toc: TocGlob, content): void
 //     在 toc 指定的章节下删除唯一匹配的 content。
 //     如果 toc 未找到或不唯一，或 content 未找到或不唯一，则抛错。
-export function deleteInTocTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
+export function deleteInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
   // 1. 读取文件内容
   const lines = readFileLines(libraryName, relativePath);
 
