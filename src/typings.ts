@@ -70,15 +70,19 @@ export type MatchingKeys<T, V> = {
 ///////////////////////////////////////////////////////////////////////////
 
 // 知识库名称
+// 如 "MyProjectDocs"
 export type LibraryName = WeakOpaque<string, 'LibraryName'>;
 
-// 知识库路径
+// 知识库绝对路径
+// 如 "/home/user/docs/MyProjectDocs"
 export type LibraryPath = WeakOpaque<string, 'LibraryPath'>;
 
-// 文件相对路径
+// 文件相对路径，相对于知识库根目录。
+// 如 "guides/installation.md"
 export type FileRelativePath = WeakOpaque<string, 'FileRelativePath'>;
 
 // 文件绝对路径
+// 如 "/home/user/docs/MyProjectDocs/guides/installation.md"
 export type FileAbsolutePath = WeakOpaque<string, 'FileAbsolutePath'>;
 
 // 模糊匹配的章节标题。
@@ -97,24 +101,11 @@ export type ContentGlobLine = WeakOpaque<string, 'ContentGlobLine'>;
 // 如 "  - This is the beginning of the section."
 export type ContentExactLine = WeakOpaque<string, 'ContentExactLine'>;
 
-// 精确匹配的内容块，多行。
-// 如 "  - This is the beginning of the section. and\n  - this is the second line"
-export type ContentExactBlock = WeakOpaque<string, 'ContentExactBlock'>;
-
 // 行号，从 1 开始计数
 export type LineNumber = WeakOpaque<number, 'LineNumber'>;
 
-// TOCLevel，从 1 开始计数(1 - #)
-export type TocLevel = WeakOpaque<number, 'TocLevel'>;
-
-// TocList, Array of {level, lineNumber, tocLineContent}
-export type TocList = {
-  level: TocLevel;
-  lineNumber: LineNumber;
-  tocLineContent: TocExactLine;
-}[];
-
-// 内容块
+// 用于定位文件中某个位置的内容上下文块。
+// 可以是基于行号的范围，或者是基于内容的精确块。
 export type ContentLocator = {
   type: 'NumbersAndLines'
   beginLineNumber: LineNumber;
@@ -123,14 +114,31 @@ export type ContentLocator = {
   endContentLine: ContentExactLine;
 } | {
   type: 'Lines'
-  ContentExactBlock: ContentExactBlock;
+  contentLines: ContentExactLine[];
 }
 
-// TOC 块
-export type TocBlock = {
+// TOCLevel，从 1 开始计数
+// 1 - #
+// 2 - ##
+// ...
+// 6 - ######
+export type TocLevel = WeakOpaque<number, 'TocLevel'>;
+
+// 一个 Toc 行项
+export type TocItem = {
+  level: TocLevel;
   lineNumber: LineNumber;
   tocLineContent: TocExactLine;
 }
+
+// 一个文件的所有目录行列表
+// TocList, Array of {level, lineNumber, tocLineContent}
+// 如 [
+//   { level: 1, lineNumber: 3, tocLineContent: "# Installation" },
+//   { level: 2, lineNumber: 10, tocLineContent: "## Step 1" },
+//   ...
+// ]
+export type TocList = TocItem[];
 
 // 整个文件的所有行
 export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
