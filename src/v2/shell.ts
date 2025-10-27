@@ -12,48 +12,31 @@ import type {
   LibraryName,
   LibraryPath,
   TocBlock,
-  TocGlob
+  TocGlob, TocList, FileWholeLines
 } from "../typings.ts";
 
-// 定义一些 string variant type
+// 我们对内容的替换基于行，和 array.shift 类似。
+// 我们对标题（toc）行的操作基本上使用模糊匹配。
 
-// 我们对文件的操作基于以下范式：
-// ## content
-//   我们对内容的替换基于行，和 array.shift 类似。
-//
+// region 路径操作
 
-//   - insertAfter(path, content: ContentExactBlock, afterContent: ContentGlobLine): void
-//     在文件中唯一匹配的 afterContent 之后插入 content。
-//     如果未找到唯一匹配，则抛错。
-//
-//   - insertInTocAfter(path, toc: TocGlob, content: ContentExactBlock, afterContent: ContentGlobLine): void
-//     在 toc 指定的章节下、唯一匹配的 afterContent 之后插入 content。
-//     如果 toc 未找到或不唯一，或 afterContent 未找到或不唯一，则抛错。
-//
-//   - add(path, content: ContentExactBlock): void
-//     在文件末尾添加 content。
-//
-//   - addInToc(path, toc: TocGlob, content): void
-//     在 toc 指定的章节下添加 content。
-//     如果 toc 未找到或不唯一，则抛错。
-//     content 会被添加在 toc 之后、任何新标题行之前。
-//
-//   - delete(path, content: ContentBlock): void
-//     删除文件中唯一匹配的 content。
-//     如果未找到唯一匹配，则抛错。
-//
-//   - deleteInToc(path, toc: TocGlob, content): void
-//     在 toc 指定的章节下删除唯一匹配的 content。
-//     如果 toc 未找到或不唯一，或 content 未找到或不唯一，则抛错。
-
+// (LibraryName) => LibraryPath
+// 获取知识库目录绝对路径
 function pathForLib(libraryName: LibraryName): LibraryPath {
   return getLibraryPath(libraryName) as LibraryPath;
 }
 
+// (LibraryName, FileRelativePath) => FileAbsolutePath
+// 获取知识库内文件的绝对路径
 function pathForFile(libraryName: LibraryName, relativePath: FileRelativePath): FileAbsolutePath {
   return path.join(pathForLib(libraryName), relativePath) as FileAbsolutePath;
 }
 
+// endregion
+// region 标准化
+
+// (str) => str
+// 标题标准化函数：去掉首尾空白、多余空白、标点符号，小写化
 function normalize(str: string): string {
   // 1. 去掉首尾空白
   str = str.trim();
@@ -70,6 +53,64 @@ function normalize(str: string): string {
   return str;
 }
 
+// endregion
+// region 文件直接读写
+
+
+// (LibraryName, FileRelativePath) => ContentExactBlock
+// 读取文件的完整内容
+export function readFileContent(libraryName: LibraryName, relativePath: FileRelativePath): ContentExactBlock {
+  const fullPath = pathForFile(libraryName, relativePath);
+  checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
+  logfile('shell', `Reading file: ${fullPath}`);
+  return fs.readFileSync(fullPath, 'utf-8');
+}
+
+// (LibraryName, FileRelativePath) => FileWholeLines
+// 读取文件的所有行
+export function readFileLines(libraryName: LibraryName, relativePath: FileRelativePath): FileWholeLines {
+  const fileContent = readFileContent(libraryName, relativePath);
+  const lines = fileContent.split('\n');
+  return lines as FileWholeLines;
+}
+
+// (LibraryName, FileRelativePath, ContentExactBlock) => void
+// 写入文件的完整内容
+export function writeFileContent(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactBlock): void {
+  const fullPath = pathForFile(libraryName, relativePath);
+  fs.writeFileSync(fullPath, content, 'utf-8');
+}
+
+// (LibraryName, FileRelativePath, FileWholeLines) => void
+// 写入文件的所有行
+export function writeFileLines(libraryName: LibraryName, relativePath: FileRelativePath, lines: FileWholeLines): void {
+  const content = lines.join('\n') as ContentExactBlock;
+  writeFileContent(libraryName, relativePath, content);
+}
+
+// endregion
+// region 章节标题操作
+
+
+// getTocList(lib, fileRelPath) - 获取文件中的所有章节标题及其行号的映射
+// 返回 TocList
+export function getTocList(libraryName: LibraryName, relativePath: FileRelativePath): TocList {
+  const fileContent = readFileContent(libraryName, relativePath);
+  const lines = fileContent.split('\n');
+  const tocList: TocList = [];
+  lines.forEach((line, index) => {
+    if (line.startsWith('#')) {
+      const level = (/^#+/.exec(line))?.[0].length ?? 1;
+      tocList.push({
+        level: level as TocList[0]['level'],
+        lineNumber: (index + 1) as TocList[0]['lineNumber'],
+        tocLineContent: line as TocList[0]['tocLineContent'],
+      });
+    }
+  });
+  return tocList;
+}
+
 // matchToc - 定位 Markdown 文件中的章节标题，采用模糊且可复现的匹配。
 //
 // 规则：只匹配以 `#` 开头的标题行。对用户提供的 `toc` 与文件中的每个标题行均做相同的标准化：
@@ -79,54 +120,30 @@ function normalize(str: string): string {
 // 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
 // 若未找到或匹配不唯一，则抛出错误并说明文件路径与候选标题。
 function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocBlock {
-
-  const fileContent = readFileContent(lib, file);
-
-  const lines = fileContent.split('\n');
-
-  // filter fileContent -> [lineNo, origLineToc, normalizedLineToc]
-  const headingLines = lines
-    .map((line, index) => [index + 1, line] as [number, string])
-    .filter(([_, line]) => line.startsWith('#'))
-    .map(([lineNo, line]) => [lineNo, line, normalize(line)] as [number, string, string]);
-
+  const tocList = getTocList(lib, file);
   const normalizedGlob = normalize(glob);
 
-  // find matches. for normalizedLineToc == normalizedGlob, not only includes
-  const matches = headingLines.filter(([_, __, normalizedLineToc]) => normalizedLineToc == normalizedGlob);
+  const matches = tocList.filter(item => normalize(item.tocLineContent) === normalizedGlob);
 
   if (matches.length === 0) {
-    throw new Error(`在文件 ${filePath} 中未找到与 '${glob}' 匹配的章节标题。`);
+    throw new Error(`在文件 ${pathForFile(lib, file)} 中未找到与 '${glob}' 匹配的章节标题。`);
   }
 
   if (matches.length > 1) {
-    throw new Error(`发现多个与 '${glob}' 匹配的章节标题，请提供更精确的标题：\n- ${matches.map(([_, line]) => line).join('\n- ')}`);
+    throw new Error(`发现多个与 '${glob}' 匹配的章节标题，请提供更精确的标题：\n- ${matches.map(m => m.tocLineContent).join('\n- ')}`);
   }
 
-  const [lineNumber, tocLineContent] = matches[0]!;
+  const match = matches[0]!;
   return {
-    lineNumber: lineNumber as TocBlock['lineNumber'],
-    tocLineContent: tocLineContent as TocBlock['tocLineContent'],
+    lineNumber: match.lineNumber,
+    tocLineContent: match.tocLineContent,
   };
-}
-
-/**
- * 读取库内文件的完整内容（UTF-8）。
- *
- * 读取位于 `pathForFile(libraryName, relativePath)` 的文件并以 UTF-8 返回其内容。
- * 若文件不存在或读取失败，将抛出错误。
- */
-export function readFileContent(libraryName: LibraryName, relativePath: FileRelativePath): string {
-  const fullPath = pathForFile(libraryName, relativePath);
-  checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
-  logfile('shell', `Reading file: ${fullPath}`);
-  return fs.readFileSync(fullPath, 'utf-8');
 }
 
 //   - replace(path, oldContent: ContentBlock, newContent: ContentBlock): void
 //     将文件中唯一匹配的 oldContent 替换为 newContent。
 //     如果未找到唯一匹配，则抛错。
-export function replaceTyped(libraryName: LibraryName, relativePath: FileRelativePath, oldContent: ContentLocator, newContent: ContentExactBlock): void {
+export function replace(libraryName: LibraryName, relativePath: FileRelativePath, oldContent: ContentLocator, newContent: ContentExactBlock): void {
 
   // 1. 读取文件内容
   const fullPath = pathForFile(libraryName, relativePath);
@@ -169,27 +186,175 @@ export function replaceTyped(libraryName: LibraryName, relativePath: FileRelativ
   fs.writeFileSync(fullPath, updatedContent, 'utf-8');
 }
 
-/**
- * Replaces a block of text in a file.
- * This is a simple implementation and might not be robust for all cases.
- * A more robust implementation would use context-based replacement.
- * @param libraryName The name of the library.
- * @param relativePath The path of the file relative to the library root.
- * @param oldContent The exact block of text to be replaced.
- * @param newContent The new block of text.
- */
-export function replaceContent(libraryName: string, relativePath: string, oldContent: string, newContent: string): void {
+//   - insertAfter(path, content: ContentExactBlock, afterContent: ContentGlobLine): void
+//     在文件中唯一匹配的 afterContent 之后插入 content。
+//     如果未找到唯一匹配，则抛错。
+export function insertAfter(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactBlock, afterContent: string): void {
+  // 1. 读取文件内容
+  const fullPath = pathForFile(libraryName, relativePath);
+  const fullContent = readFileContent(libraryName, relativePath);
+
+  // 2. 确定是否唯一匹配。找不到和多处匹配均报错 - 不同的错误信息。
+  const occurrences = fullContent.split(afterContent).length - 1;
+  if (occurrences === 0) {
+    throw new Error(`在文件 ${relativePath} 中未找到要插入内容之后的定位内容 (afterContent)。请确保 afterContent 参数与文件中的内容完全匹配。`);
+  }
+  if (occurrences > 1) {
+    throw new Error(`在文件 ${relativePath} 中找到多处匹配的定位内容 (afterContent)。请确保 afterContent 参数唯一匹配文件中的内容。`);
+  }
+
+  // 3. 执行插入操作，确保插入的是整行
+  const updatedContent = fullContent.replace(afterContent, `${afterContent}\n${content}`);
+
+  // 4. 写回文件
+  fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+}
+
+
+//   - insertInTocAfter(path, toc: TocGlob, content: ContentExactBlock, afterContent: ContentGlobLine): void
+//     在 toc 指定的章节下、唯一匹配的 afterContent 之后插入 content。
+//     如果 toc 未找到或不唯一，或 afterContent 未找到或不唯一，则抛错。
+//
+export function insertInTocAfterTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactBlock, afterContent: string): void {
+
+  // 1. 读取文件内容
+  const fullPath = pathForFile(libraryName, relativePath);
+  const fullContent = readFileContent(libraryName, relativePath);
+  const lines = fullContent.split('\n');
+
+  // 2. 定位 toc 并确认其唯一性
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  // 3. 在 toclist 中找到下一个标题行，确定章节范围
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  const sectionStart = tocLineNumber;
+  const sectionEnd = nextToc ? nextToc.lineNumber - 1 : lines.length;
+
+  // 4. 在章节范围内定位 afterContent 并确认其唯一性
+  const sectionLines = lines.slice(sectionStart, sectionEnd);
+  const sectionContent = sectionLines.join('\n');
+  const occurrences = sectionContent.split(afterContent).length - 1;
+  if (occurrences === 0) {
+    throw new Error(`在文件 ${relativePath} 的章节 '${toc}' 中未找到要插入内容之后的定位内容 (afterContent)。请确保 afterContent 参数与章节内容完全匹配。`);
+  }
+  if (occurrences > 1) {
+    throw new Error(`在文件 ${relativePath} 的章节 '${toc}' 中找到多处匹配的定位内容 (afterContent)。请确保 afterContent 参数唯一匹配章节内容。`);
+  }
+
+  // 5. 执行插入操作，确保插入的是整行
+  const updatedSectionContent = sectionContent.replace(afterContent, `${afterContent}\n${content}`);
+
+  // 6. 组装更新后的文件内容
+  const beforeSection = lines.slice(0, sectionStart).join('\n');
+  const afterSection = lines.slice(sectionEnd).join('\n');
+  const updatedContent = [beforeSection, updatedSectionContent, afterSection].filter(part => part.length > 0).join('\n');
+
+  // 7. 写回文件
+  fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+}
+
+//   - add(path, content: ContentExactBlock): void
+//     在文件末尾添加 content。
+//
+export function add(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactBlock): void {
+  // 1. 读取文件内容
+  const fullPath = pathForFile(libraryName, relativePath);
+  const fullContent = readFileContent(libraryName, relativePath);
+
+  // 2. 在文件末尾添加 content
+  const updatedContent = `${fullContent}\n${content}`;
+  // 3. 写回文件
+  fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+}
+
+
+//   - addInToc(path, toc: TocGlob, content): void
+//     在 toc 指定的章节下添加 content。
+//     如果 toc 未找到或不唯一，则抛错。
+//     content 会被添加在 toc 之后、任何新标题行之前。
+//
+export function addInTocTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactBlock): void {
+
+  // 1. 读取文件内容
+  const fullPath = pathForFile(libraryName, relativePath);
+  const fullContent = readFileContent(libraryName, relativePath);
+  const lines = fullContent.split('\n');
+  // 2. 定位 toc 并确认其唯一性
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  // 3. 在 toclist 中找到下一个标题行，确定插入位置
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  const insertPosition = nextToc ? nextToc.lineNumber - 1 : lines.length;
+  // 4. 执行插入操作
+  const before = lines.slice(0, insertPosition).join('\n');
+  const after = lines.slice(insertPosition).join('\n');
+  const updatedContent = [before, content, after].filter(part => part.length > 0).join('\n');
+  // 5. 写回文件
+  fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+}
+
+
+//   - delete(path, content: ContentBlock): void
+//     删除文件中唯一匹配的 content。
+//     如果未找到唯一匹配，则抛错。
+//
+export function deleteContent(libraryName: string, relativePath: string, content: ContentExactBlock): void {
   const libraryPath = getLibraryPath(libraryName);
   const fullPath = path.join(libraryPath, relativePath);
   checks(shell.test('-f', fullPath), `File not found: ${fullPath}`);
 
   const originalFileContent = fs.readFileSync(fullPath, 'utf-8');
-  const updatedContent = originalFileContent.replace(oldContent, newContent);
-
-  checks(originalFileContent !== updatedContent, `'oldContent' not found in file ${fullPath}. Replacement failed.`);
+  const occurrences = originalFileContent.split(content).length - 1;
+  checks(occurrences === 1, `Expected exactly one occurrence of the content to delete in file ${fullPath}, but found ${occurrences}.`);
+  const updatedContent = originalFileContent.replace(content, '');
 
   fs.writeFileSync(fullPath, updatedContent, 'utf-8');
-  logfile('shell', `Replaced content in file: ${fullPath}`);
+}
+
+
+//   - deleteInToc(path, toc: TocGlob, content): void
+//     在 toc 指定的章节下删除唯一匹配的 content。
+//     如果 toc 未找到或不唯一，或 content 未找到或不唯一，则抛错。
+export function deleteInTocTyped(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactBlock): void {
+
+  // 1. 读取文件内容
+  const fullPath = pathForFile(libraryName, relativePath);
+  const fullContent = readFileContent(libraryName, relativePath);
+  const lines = fullContent.split('\n');
+
+  // 2. 定位 toc 并确认其唯一性
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  // 3. 在 toclist 中找到下一个标题行，确定章节范围
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  const sectionStart = tocLineNumber;
+  const sectionEnd = nextToc ? nextToc.lineNumber - 1 : lines.length;
+
+  // 4. 在章节范围内定位 content 并确认其唯一性
+  const sectionLines = lines.slice(sectionStart, sectionEnd);
+  const sectionContent = sectionLines.join('\n');
+  const occurrences = sectionContent.split(content).length - 1;
+  checks(occurrences === 1, `Expected exactly one occurrence of the content to delete in section '${toc}' of file ${relativePath}, but found ${occurrences}.`);
+
+  // 5. 执行删除操作
+  const updatedSectionContent = sectionContent.replace(content, '');
+
+  // 6. 组装更新后的文件内容
+  const beforeSection = lines.slice(0, sectionStart).join('\n');
+  const afterSection = lines.slice(sectionEnd).join('\n');
+  const updatedContent = [beforeSection, updatedSectionContent, afterSection].filter(part => part.length > 0).join('\n');
+
+  // 7. 写回文件
+  fs.writeFileSync(fullPath, updatedContent, 'utf-8');
 }
 
 /**

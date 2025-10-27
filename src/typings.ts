@@ -104,6 +104,16 @@ export type ContentExactBlock = WeakOpaque<string, 'ContentExactBlock'>;
 // 行号，从 1 开始计数
 export type LineNumber = WeakOpaque<number, 'LineNumber'>;
 
+// TOCLevel，从 1 开始计数(1 - #)
+export type TocLevel = WeakOpaque<number, 'TocLevel'>;
+
+// TocList, Array of {level, lineNumber, tocLineContent}
+export type TocList = {
+  level: TocLevel;
+  lineNumber: LineNumber;
+  tocLineContent: TocExactLine;
+}[];
+
 // 内容块
 export type ContentLocator = {
   type: 'NumbersAndLines'
@@ -121,3 +131,7 @@ export type TocBlock = {
   lineNumber: LineNumber;
   tocLineContent: TocExactLine;
 }
+
+// 整个文件的所有行
+export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
+
