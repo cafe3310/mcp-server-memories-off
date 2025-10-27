@@ -161,7 +161,7 @@ export function getTocList(libraryName: LibraryName, relativePath: FileRelativeP
 // matchToc(lib, file, tocGlob) - 定位 Markdown 文件中的章节标题，采用模糊匹配。
 // 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
 // 若未找到或匹配不唯一，则抛出错误并说明文件路径与候选标题。
-function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem {
+export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem {
   const tocList = getTocList(lib, file);
   const normalizedGlob = normalize(glob);
   const matches = tocList.filter(item => normalize(item.tocLineContent) === normalizedGlob);

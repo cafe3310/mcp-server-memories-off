@@ -1,29 +1,19 @@
-import yargs from 'yargs';
-import { hideBin } from 'yargs/helpers';
 import { checks, logfile } from '../utils.ts';
 import path from "path";
 
-// Parses the command line arguments and manages library paths.
+// Parses the library paths from environment variables.
 
-const argv = yargs(hideBin(process.argv))
-  .option('libraries', {
-    alias: 'l',
-    type: 'string',
-    description: 'A comma-separated list of name:path pairs for knowledge libraries',
-    demandOption: true,
-  })
-  .help()
-  .alias('help', 'h')
-  .parseSync();
+const librariesStr = process.env.MCP_LIBRARIES;
+checks(!!librariesStr, 'MCP_LIBRARIES environment variable is not set. Please provide a comma-separated list of name:path pairs.');
 
 const libraries = new Map<string, string>();
 
-// Parse the --libraries argument
-if (argv.libraries) {
-  const pairs = argv.libraries.split(',');
+// Parse the MCP_LIBRARIES environment variable
+if (librariesStr) {
+  const pairs = librariesStr.split(',');
   for (const pair of pairs) {
     const [name, libPath] = pair.split(':');
-    checks(!!(name && libPath), `Invalid library format: ${pair}`);
+    checks(!!(name && libPath), `Invalid library format in MCP_LIBRARIES: ${pair}`);
     const absolutePath = path.resolve(libPath);
     libraries.set(name, absolutePath);
     logfile('runtime', `Loaded library '${name}' at path '${absolutePath}'`);

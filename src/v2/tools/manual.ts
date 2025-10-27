@@ -1,9 +1,5 @@
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import {matchToc, readFileContent, replaceContent} from '../shell.ts';
-import { getLibraryPath } from '../runtime.ts';
-import YAML from 'yaml';
-import path from 'path';
 
 // Zod schema for the readManual tool
 export const ReadManualInputSchema = z.object({
@@ -26,9 +22,9 @@ export const readManualTool = {
     inputSchema: zodToJsonSchema(ReadManualInputSchema),
   },
   handler: (args: unknown) => {
-    const { libraryName } = ReadManualInputSchema.parse(args);
-    const content = readFileContent(libraryName, 'meta.md');
-    return { content: [{ type: 'text', text: content }] };
+
+    // TODO 尚未实现
+
   },
 };
 
@@ -40,34 +36,9 @@ export const updateManualSectionTool = {
     inputSchema: zodToJsonSchema(UpdateManualSectionInputSchema),
   },
   handler: (args: unknown) => {
-    const { libraryName, toc, oldContent, newContent } = UpdateManualSectionInputSchema.parse(args);
-          
-    const libraryPath = getLibraryPath(libraryName);
-    const fullPath = path.join(libraryPath, 'meta.md');
-  
-    // 1. Use matchToc to find the unique heading.
-    const matchedHeading = matchToc(fullPath, toc);
-    
-    // fixme 我们这里其实并没有用到 matchedHeading，后续可以改进为基于 heading 定位内容块进行替换，而不是全文替换
-    //       为此还需要定义一个比较复杂的 {content, beginline, endline} 范围匹配和替换逻辑。
-  
-    // 2. Read the whole file and perform a direct replacement. Only replace first match
-    const fullContent = readFileContent(libraryName, 'meta.md');
-    const updatedContent = fullContent.replace(oldContent, newContent);
-  
-    if (fullContent === updatedContent) {
-      throw new Error(`在 meta.md 中未找到要替换的旧内容 (oldContent)。请确保 oldContent 参数与文件中的内容完全匹配。`);
-    }
-  
-    // 3. Write the updated content back.
-    replaceContent(libraryName, 'meta.md', fullContent, updatedContent);
-  
-    const response = {
-      status: 'success',
-      message: `章节 '${matchedHeading.substring(3).trim()}' 已在 meta.md 中更新。`,
-    };
-  
-    return { content: [{ type: 'text', text: YAML.stringify(response) }] };
+
+    // TODO 尚未实现
+
   },};
 
 // Export all manual tools in a structured way
