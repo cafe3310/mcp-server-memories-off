@@ -23,7 +23,8 @@
     "build": "bun build ./src/index.ts --minify --target=node --outdir=dist",
     "lint": "bunx eslint ./src",
     "pub-patch": "bun run build && npm version patch && tnpm publish",
-    "test": "bun test"
+    "test": "bun test",
+    "coverage": "bun test --coverage"
   },
   "repository": {
     "type": "git",
