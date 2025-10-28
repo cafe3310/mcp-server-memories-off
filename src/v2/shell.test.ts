@@ -1,4 +1,4 @@
-import {describe, it, mock, expect} from 'bun:test';
+import {describe, it, mock, expect, spyOn} from 'bun:test';
 import type {FileWholeLines, LibraryName, FileRelativePath} from '../typings';
 
 // Test data
@@ -27,7 +27,10 @@ const MOCK_FILE_CONTENT_LINES: FileWholeLines = [
 // Mock dependencies using the correct `bun:test` API
 
 
-import {readFileLines, getTocList, normalize} from './shell';
+import {readFileLines, getTocList, normalize, linesMatchContent, linesReplace, matchToc, deleteContent, add, addInToc, deleteInToc, createFile, replace, insertAfter, insertInTocAfter} from './shell';
+import fs from 'fs';
+import {beforeEach, spyOn} from "bun:test";
+import {shellTestMock} from "../../test/setup";
 
 // Very small tests to exercise basic helpers
 describe('shell helpers (basic)', () => {
@@ -51,5 +54,173 @@ describe('shell helpers (basic)', () => {
     expect(normalize('  ## Section 1: Details,  ')).toBe('section 1 details');
     expect(normalize('Another Example (with parens!)')).toBe('another example with parens');
     expect(normalize('  Multiple   Spaces  ')).toBe('multiple spaces');
+  });
+});
+
+describe('shell line operations', () => {
+  it('linesMatchContent should find a unique content block', () => {
+    const contentToFind = ['Here is some detail.', 'Line to be deleted.'];
+    const lineNumber = linesMatchContent(MOCK_FILE_CONTENT_LINES, contentToFind);
+    expect(lineNumber).toBe(8);
+  });
+
+  it('linesMatchContent should throw if content not found', () => {
+    const contentToFind = ['This content does not exist.'];
+    expect(() => linesMatchContent(MOCK_FILE_CONTENT_LINES, contentToFind)).toThrow('未找到匹配的内容块。');
+  });
+
+  it('linesMatchContent should throw if content is not unique', () => {
+    const duplicatedLines = [...MOCK_FILE_CONTENT_LINES, 'Here is some detail.', 'Line to be deleted.'] as FileWholeLines;
+    const contentToFind = ['Here is some detail.', 'Line to be deleted.'];
+    expect(() => linesMatchContent(duplicatedLines, contentToFind)).toThrow('发现多个匹配的内容块，请提供更精确的定位。');
+  });
+
+  it('linesReplace should replace a block of lines', () => {
+    const newContent = ['This is new content.'];
+    const result = linesReplace(MOCK_FILE_CONTENT_LINES, 8, 10, newContent);
+    expect(result[7]).toBe(newContent[0]);
+    expect(result.length).toBe(MOCK_FILE_CONTENT_LINES.length - 2);
+  });
+
+  it('linesReplace should delete a block of lines if new content is empty', () => {
+    const result = linesReplace(MOCK_FILE_CONTENT_LINES, 8, 10, []);
+    expect(result[7]).toBe('');
+    expect(result.length).toBe(MOCK_FILE_CONTENT_LINES.length - 3);
+  });
+});
+
+describe('shell TOC operations', () => {
+  it('matchToc should find a unique TOC item', () => {
+    const tocItem = matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
+    expect(tocItem.lineNumber).toBe(6);
+    expect(tocItem.tocLineContent).toBe('## Section 1: Details');
+  });
+
+  it('matchToc should throw if TOC item not found', () => {
+    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section')).toThrow('中未找到与');
+  });
+
+  it('matchToc should throw if TOC item is ambiguous', () => {
+    // Create content where two different titles normalize to the same string
+    const ambiguousTocLines = [
+      '# Welcome',
+      '## Section 1: Details', // normalizes to 'section 1 details'
+      'Some content',
+      '## section 1 (details)', // also normalizes to 'section 1 details'
+    ] as FileWholeLines;
+
+    const readSpy = spyOn(fs, 'readFileSync');
+    readSpy.mockImplementation(() => ambiguousTocLines.join('\n'));
+
+    // Use the normalized string that causes ambiguity
+    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details')).toThrow('发现多个与');
+
+    // Restore the spy to the default mock implementation for subsequent tests
+    readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
+  });
+});
+
+describe('shell file content modifications', () => {
+  beforeEach(() => {
+    (fs.writeFileSync as any).mockClear();
+  });
+
+  it('deleteContent should remove the specified lines from the file', () => {
+    const contentToDelete = ['Line to be deleted.'];
+    deleteContent(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToDelete);
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    expect(writtenContent).not.toInclude('Line to be deleted.');
+    expect(writtenContent.split('\n').length).toBe(MOCK_FILE_CONTENT_LINES.length - 1);
+  });
+
+  it('add should append content to the end of the file', () => {
+    const contentToAdd = ['// New final line'];
+    add(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd);
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    expect(writtenContent.endsWith('\n// New final line')).toBe(true);
+  });
+
+  it('addInToc should add content within a specified TOC section', () => {
+    const contentToAdd = ['> A new quote.'];
+    addInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 2: More Details', contentToAdd);
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    const lines = writtenContent.split('\n');
+    // It should be inserted after "Final content here." (line 14) and before "## Section 3: Empty" (line 15)
+    expect(lines[14]).toBe('> A new quote.');
+    expect(lines[15]).toBe('## Section 3: Empty');
+  });
+
+  it('deleteInToc should delete content within a specified TOC section', () => {
+    const contentToDelete = ['Here is some detail.'];
+    deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete);
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    expect(writtenContent).not.toInclude('Here is some detail.');
+    const lines = writtenContent.split('\n');
+    expect(lines[7]).toBe('Line to be deleted.');
+  });
+
+  it('deleteInToc should throw if content is not in the specified TOC section', () => {
+    const contentToDelete = ['Final content here.']; // This is in Section 2
+    expect(() => deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete))
+      .toThrow('未找到匹配的内容块。');
+  });
+
+  it('replace should substitute content based on line numbers', () => {
+    const newContent = ['Replaced content.'];
+    const oldContentLocator = { type: 'NumbersAndLines', beginLineNumber: 8, endLineNumber: 8, beginContentLine: 'Here is some detail.', endContentLine: 'Here is some detail.' };
+    replace(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, oldContentLocator, newContent);
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    expect(writtenContent).toInclude('Replaced content.');
+    expect(writtenContent).not.toInclude('Here is some detail.');
+  });
+
+  it('insertAfter should add content after a specific block', () => {
+    const contentToAdd = ['Appended line.'];
+    const afterContent = ['This is the introduction.'];
+    insertAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd, afterContent);
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    const lines = writtenContent.split('\n');
+    expect(lines[3]).toBe('Appended line.');
+  });
+
+  it('insertInTocAfter should add content after a specific line within a TOC', () => {
+    const contentToAdd = ['A detail about the detail.'];
+    const afterContent = ['Here is some detail.'];
+    insertInTocAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToAdd, afterContent);
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = (fs.writeFileSync as any).mock.calls[0][1] as string;
+    const lines = writtenContent.split('\n');
+    expect(lines[8]).toBe('A detail about the detail.');
+  });
+});
+
+describe('createFile', () => {
+  beforeEach(() => {
+    (fs.writeFileSync as any).mockClear();
+    shellTestMock.mockImplementation(() => true);
+  });
+
+  it('should create a file if it does not exist', () => {
+    shellTestMock.mockImplementation(() => false); // Mock file does not exist
+    const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
+    createFile(MOCK_LIBRARY_NAME, 'new-file.md', newContent);
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    expect((fs.writeFileSync as any).mock.calls[0][1]).toBe('new file content');
+  });
+
+  it('should throw an error if the file already exists', () => {
+    shellTestMock.mockImplementation(() => true); // Mock file exists
+    const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
+    expect(() => createFile(MOCK_LIBRARY_NAME, 'existing-file.md', newContent)).toThrow('文件已存在，无法创建');
   });
 });

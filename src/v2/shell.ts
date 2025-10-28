@@ -44,7 +44,7 @@ function linesVerifyBeginEnd(lines: FileWholeLines,
 // 在给定的行数组中，检查是否存在与 contentLines 完全匹配的连续行段，且是唯一的匹配。
 // 如果设置了 searchStartLine 和 searchEndLine，则只在该范围内进行检查。
 // 若找到唯一匹配，返回起始行号（从 1 开始计数）；否则抛出异常。
-function linesMatchContent(lines: FileWholeLines,
+export function linesMatchContent(lines: FileWholeLines,
                            contentLines: string[],
                            searchStartLine?: LineNumber, searchEndLine?: LineNumber): LineNumber {
   const startIndex = (searchStartLine ? searchStartLine - 1 : 0);
@@ -63,7 +63,7 @@ function linesMatchContent(lines: FileWholeLines,
 
 // linesReplace(lines, beginLineNo, endLineNo, newContentLines) => FileWholeLines
 // 在给定的行数组中，将从 beginLineNo 到 endLineNo 的行替换为 newContentLines，返回新的行数组。
-function linesReplace(lines: FileWholeLines,
+export function linesReplace(lines: FileWholeLines,
                       beginLineNo: LineNumber, endLineNo: LineNumber,
                       newContentLines: string[]): FileWholeLines {
   const beginIndex = beginLineNo - 1;
