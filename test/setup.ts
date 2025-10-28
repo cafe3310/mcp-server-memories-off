@@ -1,10 +1,10 @@
-process.env.MCP_LIBRARIES = `test-library:/Users/sipan/workspace/mcp-server-memories-off/test/test-library`;
+process.env["MCP_LIBRARIES"] = `test-library:/Users/sipan/workspace/mcp-server-memories-off/test/test-library`;
 
 import { mock } from 'bun:test';
 
 // This is the same mock data used in the test file. 
 // It's centralized here to be preloaded.
-const MOCK_FILE_CONTENT_LINES = [
+export const MOCK_FILE_CONTENT_LINES = [
   '# Welcome',
   '',
   'This is the introduction.',
@@ -41,3 +41,7 @@ await mock.module('shelljs', () => ({
     test: shellTestMock,
   }
 }));
+
+// Test data
+export const MOCK_LIBRARY_NAME = 'test-library';
+export const MOCK_FILE_RELATIVE_PATH = 'test.md';
