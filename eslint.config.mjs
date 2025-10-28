@@ -13,7 +13,12 @@ export default tseslint.config(
             '@stylistic': stylistic
         },
         rules: {
-            '@stylistic/indent': ['error', 2],
+            '@stylistic/indent': ['error', 2, {
+                // 允许函数调用时的额外缩进
+                CallExpression: { arguments: 'first' },
+                // 允许函数声明时的额外缩进
+                FunctionDeclaration: { parameters: 'first' }
+            }],
         },
     },
     {
