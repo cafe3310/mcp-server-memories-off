@@ -1,138 +1,115 @@
-import {describe, it, expect, beforeEach, spyOn} from 'bun:test';
-import fs from 'fs';
-import * as shell from '../shell';
-import {readManualTool, updateManualSectionTool, addManualSectionTool, deleteManualSectionTool} from './manual';
-import {shellTestMock} from '../../../test/setup';
-import type {FileWholeLines} from '../../typings';
+import {describe, it, expect, beforeEach, type Mock, jest} from 'bun:test';
 
-// Spies for shell functions
-const readFileLinesSpy = spyOn(shell, 'readFileLines');
-const writeFileLinesSpy = spyOn(shell, 'writeFileLines');
-const getTocListSpy = spyOn(shell, 'getTocList');
-const matchTocSpy = spyOn(shell, 'matchToc');
-const linesMatchContentSpy = spyOn(shell, 'linesMatchContent');
-const linesReplaceSpy = spyOn(shell, 'linesReplace');
-const addInTocSpy = spyOn(shell, 'addInToc');
-const deleteInTocSpy = spyOn(shell, 'deleteInToc');
+// Mock the entire shell module using Jest-style mocking.
+jest.mock('../shell', () => ({
+  readFileLines: jest.fn(),
+  replaceInToc: jest.fn(),
+  addInToc: jest.fn(),
+  deleteInToc: jest.fn(),
+}));
 
-// Mock data
+// Import the mocked functions so we can spy on them and configure them
+import {
+  readFileLines,
+  replaceInToc,
+  addInToc,
+  deleteInToc
+} from '../shell';
+
+// Import the tools to be tested
+import {
+  readManualTool,
+  editManualSectionTool,
+  addManualSectionTool,
+  deleteManualSectionTool
+} from './manual';
+
 const MOCK_LIBRARY_NAME = 'test-library';
-const MOCK_META_CONTENT: FileWholeLines = [
-  '# Meta',
-  '',
-  '## Section 1',
-  'Old content line 1',
-  'Old content line 2',
-  '',
-  '## Section 2',
-  'Some other content',
-] as FileWholeLines;
 
 describe('Manual Tools', () => {
 
+  // Before each test, clear call history and reset any specific mock implementations.
   beforeEach(() => {
-    // Reset spies before each test
-    readFileLinesSpy.mockClear();
-    writeFileLinesSpy.mockClear();
-    getTocListSpy.mockClear();
-    matchTocSpy.mockClear();
-    linesMatchContentSpy.mockClear();
-    linesReplaceSpy.mockClear();
-    addInTocSpy.mockClear();
-    deleteInTocSpy.mockClear();
-
-    // Default mock implementations
-    readFileLinesSpy.mockReturnValue(MOCK_META_CONTENT);
-    getTocListSpy.mockReturnValue([
-      {level: 1, lineNumber: 1, tocLineContent: '# Meta'},
-      {level: 2, lineNumber: 3, tocLineContent: '## Section 1'},
-      {level: 2, lineNumber: 7, tocLineContent: '## Section 2'},
-    ]);
-    matchTocSpy.mockReturnValue({level: 2, lineNumber: 3, tocLineContent: '## Section 1'});
-    linesMatchContentSpy.mockReturnValue(4);
-    linesReplaceSpy.mockImplementation((_, __, ___, newLines) => newLines as FileWholeLines);
+    jest.clearAllMocks();
   });
 
-  describe('readManual', () => {
-    it('should call readFileLines and return the content', () => {
-      const args = {libraryName: MOCK_LIBRARY_NAME};
-      const result = readManualTool.handler(args);
+  describe('readManualTool', () => {
+    it('should call readFileLines and return formatted content', () => {
+      const mockFileContent = ['Line 1', 'Line 2'];
+      (readFileLines as Mock).mockReturnValue(mockFileContent);
 
-      expect(readFileLinesSpy).toHaveBeenCalledWith(MOCK_LIBRARY_NAME, 'meta.md');
-      expect(result.content[0].text).toBe(MOCK_META_CONTENT.join('\n'));
+      const result = readManualTool.handler({libraryName: MOCK_LIBRARY_NAME});
+
+      expect(readFileLines).toHaveBeenCalledWith(MOCK_LIBRARY_NAME, 'meta.md');
+      expect(result).toBe(`---file-start: ${MOCK_LIBRARY_NAME}/meta.md---
+Line 1\nLine 2
+---file-end---`);
+    });
+
+    it('should throw if libraryName is missing', () => {
+      expect(() => readManualTool.handler({})).toThrow();
     });
   });
 
-  describe('updateManualSection', () => {
-    it('should orchestrate shell functions to update a section', () => {
+  describe('editManualSectionTool', () => {
+    it('should call replaceInToc with correct arguments', () => {
       const args = {
         libraryName: MOCK_LIBRARY_NAME,
-        toc: 'Section 1',
-        oldContent: 'Old content line 1\nOld content line 2',
-        newContent: 'New content.',
+        toc: 'Target Section',
+        oldContent: 'old line',
+        newContent: 'new line',
       };
 
-      const result = updateManualSectionTool.handler(args);
+      const result = editManualSectionTool.handler(args);
 
-      // Verify the orchestration
-      expect(readFileLinesSpy).toHaveBeenCalledWith(MOCK_LIBRARY_NAME, 'meta.md');
-      expect(getTocListSpy).toHaveBeenCalledWith(MOCK_LIBRARY_NAME, 'meta.md');
-      expect(matchTocSpy).toHaveBeenCalledWith(MOCK_LIBRARY_NAME, 'meta.md', 'Section 1');
-      expect(linesMatchContentSpy).toHaveBeenCalledWith(
-        MOCK_META_CONTENT,
-        ['Old content line 1', 'Old content line 2'],
-        3, // sectionStartLine
-        6  // sectionEndLine
+      expect(replaceInToc).toHaveBeenCalledWith(
+        MOCK_LIBRARY_NAME,
+        'meta.md',
+        'Target Section',
+        {type: 'Lines', contentLines: ['old line']},
+        ['new line']
       );
-      expect(linesReplaceSpy).toHaveBeenCalledWith(
-        MOCK_META_CONTENT,
-        4, // beginLineNo
-        5, // endLineNo
-        ['New content.']
-      );
-      expect(writeFileLinesSpy).toHaveBeenCalledTimes(1);
-
-      // Verify the success message
-      expect(result.status).toBe('success');
-      expect(result.message).toInclude('Section \'## Section 1\' in meta.md was updated');
+      expect(result).toContain('status: success');
     });
   });
 
-  describe('addManualSection', () => {
+  describe('addManualSectionTool', () => {
     it('should call addInToc with correct arguments', () => {
       const args = {
         libraryName: MOCK_LIBRARY_NAME,
-        toc: 'Section 1',
-        newContent: 'Newly added line.',
+        toc: 'Target Section',
+        newContent: 'new line',
       };
+
       const result = addManualSectionTool.handler(args);
 
-      expect(addInTocSpy).toHaveBeenCalledWith(
+      expect(addInToc).toHaveBeenCalledWith(
         MOCK_LIBRARY_NAME,
         'meta.md',
-        'Section 1',
-        ['Newly added line.']
+        'Target Section',
+        ['new line']
       );
-      expect(result.status).toBe('success');
+      expect(result).toContain('status: success');
     });
   });
 
-  describe('deleteManualSection', () => {
+  describe('deleteManualSectionTool', () => {
     it('should call deleteInToc with correct arguments', () => {
       const args = {
         libraryName: MOCK_LIBRARY_NAME,
-        toc: 'Section 1',
-        deletingContent: 'Old content line 1',
+        toc: 'Target Section',
+        deletingContent: 'line to delete',
       };
+
       const result = deleteManualSectionTool.handler(args);
 
-      expect(deleteInTocSpy).toHaveBeenCalledWith(
+      expect(deleteInToc).toHaveBeenCalledWith(
         MOCK_LIBRARY_NAME,
         'meta.md',
-        'Section 1',
-        ['Old content line 1']
+        'Target Section',
+        ['line to delete']
       );
-      expect(result.status).toBe('success');
+      expect(result).toContain('status: success');
     });
   });
 });
