@@ -100,20 +100,18 @@ function pathForFile(libraryName: LibraryName, relativePath: FileRelativePath): 
 
 // (str) => str
 // 标题标准化函数：去掉首尾空白、多余空白、标点符号，小写化
-function normalize(str: string): string {
-  // 1. 去掉首尾空白
-  str = str.trim();
-
-  // 2. 多个空白归一化为单个空格
+export function normalize(str: string): string {
+  // 1. 多个空白归一化为单个空格
   str = str.replace(/\s+/g, ' ');
 
-  // 3. 移除所有标点符号（中文和英文）
+  // 2. 移除所有标点符号（中文和英文）
   str = str.replace(/[.,\\/#!$%^&*;:{}=\-_`~()，。、《》？；：‘’“”【】（）…]/g, '');
 
-  // 4. 小写化
+  // 3. 小写化
   str = str.toLowerCase();
 
-  return str;
+  // 4. 去掉首尾空白
+  return str.trim();
 }
 
 // endregion

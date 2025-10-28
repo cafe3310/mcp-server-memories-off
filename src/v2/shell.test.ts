@@ -25,17 +25,9 @@ const MOCK_FILE_CONTENT_LINES: FileWholeLines = [
 ] as FileWholeLines;
 
 // Mock dependencies using the correct `bun:test` API
-await mock.module('fs', () => {
-  return ({
-    readFileSync: mock(() => MOCK_FILE_CONTENT_LINES.join('\n')),
-    writeFileSync: mock(() => { return; }),
-  });
-});
-await mock.module('shelljs', () => ({
-  test: mock(() => true),
-}));
 
-import {readFileLines, getTocList} from './shell';
+
+import {readFileLines, getTocList, normalize} from './shell';
 
 // Very small tests to exercise basic helpers
 describe('shell helpers (basic)', () => {
@@ -53,5 +45,11 @@ describe('shell helpers (basic)', () => {
     expect(toc[1]!.lineNumber).toBe(6);
     expect(toc[2]!.tocLineContent.startsWith('## Section 2')).toBe(true);
     expect(toc[2]!.lineNumber).toBe(12);
+  });
+
+  it('normalize should clean and standardize strings', () => {
+    expect(normalize('  ## Section 1: Details,  ')).toBe('section 1 details');
+    expect(normalize('Another Example (with parens!)')).toBe('another example with parens');
+    expect(normalize('  Multiple   Spaces  ')).toBe('multiple spaces');
   });
 });
