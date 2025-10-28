@@ -5,7 +5,23 @@ import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from
 // Mock dependencies using the correct `bun:test` API
 
 
-import {readFileLines, getTocList, normalize, linesMatchContent, linesReplace, matchToc, deleteContent, add, addInToc, deleteInToc, createFile, replace, insertAfter, insertInTocAfter} from './shell';
+import {
+  readFileLines,
+  getTocList,
+  normalize,
+  linesMatchContent,
+  linesReplace,
+  matchToc,
+  deleteContent,
+  add,
+  addInToc,
+  deleteInToc,
+  createFile,
+  replace,
+  insertAfter,
+  insertInTocAfter,
+  replaceInToc
+} from './shell';
 import fs from 'fs';
 import * as mockSetup from "../../test/setup";
 
@@ -212,6 +228,20 @@ describe('shell file content modifications', () => {
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
     const lines = writtenContent.split('\n');
     expect(lines[8]).toBe('A detail about the detail.');
+  });
+
+  it('replaceInToc should replace content within a specific TOC section', () => {
+    const newContent = ['Replaced detail.'];
+    replaceInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', {
+      type: 'Lines',
+      contentLines: ['Here is some detail.']
+    }, newContent);
+
+    expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
+    const writtenContent = writeSpy.mock.calls[0]![1] as string;
+    const lines = writtenContent.split('\n');
+    expect(lines[7]).toInclude('Replaced detail.');
+    expect(writtenContent).not.toInclude('Here is some detail.');
   });
 });
 

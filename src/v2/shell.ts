@@ -168,6 +168,9 @@ export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob
   return matches[0]!;
 }
 
+// endregion
+// region 编辑操作
+
 //   - replace(path, oldContent: ContentBlock, newContent: ContentBlock): void
 //     将文件中唯一匹配的 oldContent 替换为 newContent。
 //     如果未找到唯一匹配，则抛错。
@@ -183,6 +186,58 @@ export function replace(libraryName: LibraryName, relativePath: FileRelativePath
     updatedLines = linesReplace(lines, beginLineNo, endLineNo, newContent);
   }
   checks(updatedLines && updatedLines.length > 0, `替换逻辑未执行，原因未知。`);
+  writeFileLines(libraryName, relativePath, updatedLines);
+}
+
+//   - replaceInToc(path, toc: TocGlob, oldContent: ContentBlock, newContent: ContentExactLine[]): void
+//     在 toc 指定的章节下，将唯一匹配的 oldContent 替换为 newContent。
+//     如果 toc 未找到或不唯一，或 oldContent 未找到或不唯一，则抛错。
+export function replaceInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, oldContent: ContentLocator, newContent: ContentExactLine[]): void {
+  // 1. 读取文件内容
+  const lines = readFileLines(libraryName, relativePath);
+
+  // 2. 定位 toc 并确认其唯一性
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  // 3. 在 tocList 中找到下一个标题行，确定章节范围
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  const sectionStartLineNumber: LineNumber = tocLineNumber;
+  const sectionEndLineNumber: LineNumber = nextToc ? nextToc.lineNumber - 1 : lines.length;
+
+  // 4. 在章节范围内定位 oldContent 并确认其唯一性
+  let beginLineNo: LineNumber;
+  let endLineNo: LineNumber;
+  if (oldContent.type === 'NumbersAndLines') {
+    linesVerifyBeginEnd(
+      lines,
+      oldContent.beginLineNumber,
+      oldContent.endLineNumber,
+      oldContent.beginContentLine,
+      oldContent.endContentLine,
+      sectionStartLineNumber,
+      sectionEndLineNumber
+    );
+    beginLineNo = oldContent.beginLineNumber;
+    endLineNo = oldContent.endLineNumber;
+  } else if (oldContent.type === 'Lines') {
+    beginLineNo = linesMatchContent(
+      lines,
+      oldContent.contentLines,
+      sectionStartLineNumber,
+      sectionEndLineNumber
+    );
+    endLineNo = beginLineNo + oldContent.contentLines.length - 1;
+  } else {
+    throw new Error(`未知的 oldContent 类型`);
+  }
+
+  // 5. 执行替换操作
+  const updatedLines = linesReplace(lines, beginLineNo, endLineNo, newContent);
+
+  // 6. 写回文件 (use helper)
   writeFileLines(libraryName, relativePath, updatedLines);
 }
 
