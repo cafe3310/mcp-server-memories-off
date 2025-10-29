@@ -7,6 +7,7 @@ const projectRoot = import.meta.dir.replace('/test/e2e', '');
 export const distPath = path.join(projectRoot, 'dist', 'index.js');
 export const tempLibraryPath = path.join(projectRoot, 'test', 'tmp', 'test-library');
 export const tempLogPath = path.join(projectRoot, 'test', 'tmp');
+export const metaFilePath = path.join(tempLibraryPath, 'meta.md');
 
 // Helper to send requests and receive responses
 export function makeRequest(serverProcess: ChildProcess, request: any, callback: (response: any) => void) {
@@ -50,6 +51,8 @@ export function resetLibAndBootMcp() {
   }
   console.log('Creating test library directory', tempLibraryPath);
   fs.mkdirSync(tempLibraryPath, {recursive: true});
+  // Create an empty meta.md file, which is required by the manual tools
+  fs.writeFileSync(path.join(tempLibraryPath, 'meta.md'), '');
 
   console.log('Building project for E2E tests...');
   execSync('bun run build', {stdio: 'inherit'});
