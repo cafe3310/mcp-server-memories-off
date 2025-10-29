@@ -1,8 +1,8 @@
 process.env["MEM_LIBRARIES"] = `test-library:/Users/sipan/workspace/mcp-server-memories-off/test/test-library`;
 
-import { mock } from 'bun:test';
+import {mock, spyOn} from 'bun:test';
 
-// This is the same mock data used in the test file. 
+// This is the same mock data used in the test file.
 // It's centralized here to be preloaded.
 export const MOCK_FILE_CONTENT_LINES = [
   '# Welcome',
@@ -22,15 +22,6 @@ export const MOCK_FILE_CONTENT_LINES = [
   '## Section 3: Empty',
   ''
 ];
-
-// Mock the 'fs' module to avoid actual file system operations.
-// readFileSync will return predefined mock content.
-await mock.module('fs', () => ({
-  default: {
-    readFileSync: mock(() => MOCK_FILE_CONTENT_LINES.join('\n')),
-    writeFileSync: mock(() => { return; }), // Mock writeFileSync to do nothing.
-  }
-}));
 
 export const shellTestMock = mock(() => true);
 

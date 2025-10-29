@@ -83,8 +83,5 @@ export const addManualSectionTool = {
 
 // Export all manual tools in a structured way
 // name -> tool definition
-export const manualTools: Record<string, McpHandlerDefinition> = {};
-manualTools[readManualTool.toolType.name] = readManualTool;
-manualTools[editManualTool.toolType.name] = editManualTool;
-manualTools[addManualSectionTool.toolType.name] = addManualSectionTool;
+export const manualTools: McpHandlerDefinition[] = [readManualTool, editManualTool, addManualSectionTool];
 

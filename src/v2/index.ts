@@ -25,23 +25,26 @@ export async function runV2() {
   });
 
   // Register tools
-  const allTools: Record<McpHandlerDefinition['toolType']['name'], McpHandlerDefinition> = {
-    ...manualTools,
-  };
-  allTools[createFileTool.toolType.name] = createFileTool;
+  const allTools = [...manualTools ];
 
   // Register request handlers
   const toolTypes = Object.values(allTools).map(t => t.toolType);
+  const toolMap: Record<string, McpHandlerDefinition> = {};
+  for (const tool of allTools) {
+    toolMap[tool.toolType.name] = tool;
+  }
+
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: toolTypes,
   }));
 
+  logfile('v2', `Registered tools: ${toolTypes.map(t => t.name).join(', ')}`);
+
   // Handler for CallTool requests
-  // @ts-expect-error too much typing hassle for now
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     logfile('v2', `Received request: ${JSON.stringify(request)}`);
     const { name, arguments: args } = request.params;
-    const tool = allTools[name];
+    const tool = toolMap[name];
     if (tool?.handler) {
       return await Promise.resolve(tool.handler(args ?? {}));
     }
