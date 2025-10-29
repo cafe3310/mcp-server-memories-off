@@ -6,7 +6,7 @@ import { getEnvVar } from './utils.js';
 const version = getEnvVar('MEM_VERSION', '1');
 
 if (version === '2') {
-  console.log('Booting v2 server...');
+  console.error('Booting v2 server...');
   import('./v2/index.js')
     .then(v2 => v2.runV2())
     .catch(error => {
@@ -14,6 +14,6 @@ if (version === '2') {
       process.exit(1);
     });
 } else {
-  console.log('Booting v1 server...');
+  console.error('Booting v1 server...');
   void import('./v1/index.js');
 }

@@ -1,4 +1,4 @@
-process.env["MCP_LIBRARIES"] = `test-library:/Users/sipan/workspace/mcp-server-memories-off/test/test-library`;
+process.env["MEM_LIBRARIES"] = `test-library:/Users/sipan/workspace/mcp-server-memories-off/test/test-library`;
 
 import { mock } from 'bun:test';
 

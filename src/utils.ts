@@ -27,11 +27,11 @@ export function checkObjHas<T>(x: unknown, key: string, valueType: string): asse
 let logConsole: Console = console;
 
 export function logfile(componentName: string, ...args: unknown[]) {
-  logConsole.log(componentName, ...args);
+  logConsole.error(componentName, ...args);
 }
 
 export function logfileV(componentName: string, ...args: unknown[]) {
-  logConsole.log(componentName, ...args);
+  logConsole.error(componentName, ...args);
 }
 
 export function logfileE(componentName: string, error: unknown, ...args: unknown[]) {
