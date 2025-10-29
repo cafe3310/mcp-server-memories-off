@@ -1,27 +1,14 @@
-import {describe, it, expect, beforeEach, spyOn, type Mock} from 'bun:test';
+import {describe, it, expect, beforeEach, spyOn, type Mock, afterAll, jest} from 'bun:test';
 
 import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from '../typings';
 
 // Mock dependencies using the correct `bun:test` API
 
 
-import {
-  readFileLines,
-  getTocList,
-  normalize,
-  linesMatchContent,
-  linesReplace,
-  matchToc,
-  deleteContent,
-  add,
-  addInToc,
-  deleteInToc,
-  createFile,
-  replace,
-  insertAfter,
-  insertInTocAfter,
-  replaceInToc
-} from './shell';
+import * as shell from './shell';
+
+
+import {readFileLines, getTocList, normalize, linesMatchContent, linesReplace, matchToc, deleteContent, add, addInToc, deleteInToc, createFile, replace, insertAfter, insertInTocAfter, replaceInToc} from './shell';
 import fs from 'fs';
 import * as mockSetup from "../../test/setup";
 
@@ -29,6 +16,11 @@ const MOCK_LIBRARY_NAME: LibraryName = mockSetup.MOCK_LIBRARY_NAME;
 const MOCK_FILE_RELATIVE_PATH: FileRelativePath = mockSetup.MOCK_FILE_RELATIVE_PATH;
 const MOCK_FILE_CONTENT_LINES: FileWholeLines = mockSetup.MOCK_FILE_CONTENT_LINES;
 const shellTestMock = mockSetup.shellTestMock;
+
+// Restore all mocks after the tests in this file have completed
+afterAll(() => {
+  jest.restoreAllMocks();
+});
 
 // Very small tests to exercise basic helpers
 describe('shell helpers (basic)', () => {
@@ -63,6 +55,12 @@ describe('shell helpers (basic)', () => {
     expect(normalize('  ## Section 1: Details,  ')).toBe('section 1 details');
     expect(normalize('Another Example (with parens!)')).toBe('another example with parens');
     expect(normalize('  Multiple   Spaces  ')).toBe('multiple spaces');
+    expect(normalize('A Title\nWith Newlines')).toBe('a title with newlines');
+  });
+
+  it('toTocLine', () => {
+    expect(shell.toTocLine('My Section')).toBe('## my section');
+    expect(shell.toTocLine(' Another Section: Details ', 3)).toBe('### another section details');
   });
 });
 
@@ -132,6 +130,30 @@ describe('shell TOC operations', () => {
     expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details')).toThrow('发现多个与');
 
     // Restore the spy to the default mock implementation for subsequent tests
+    readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
+  });
+
+  it('matchTocNoThrow should return matches without throwing', () => {
+    // Case 1: Unique match
+    let matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
+    expect(matches.length).toBe(1);
+    expect(matches[0]!.lineNumber).toBe(6);
+
+    // Case 2: No match
+    matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section');
+    expect(matches.length).toBe(0);
+
+    // Case 3: Ambiguous match
+    const ambiguousTocLines = [
+      '# Welcome',
+      '## Section 1: Details',
+      '## section 1 (details)',
+    ] as FileWholeLines;
+    readSpy.mockImplementation(() => ambiguousTocLines.join('\n'));
+    matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details');
+    expect(matches.length).toBe(2);
+
+    // Restore spy
     readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
   });
 });

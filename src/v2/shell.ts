@@ -107,11 +107,22 @@ export function normalize(str: string): string {
   // 2. 移除所有标点符号（中文和英文）
   str = str.replace(/[.,\\/#!$%^&*;:{}=\-_`~()，。、《》？；：‘’“”【】（）…]/g, '');
 
+  // 移除换行符
+  str = str.replace(/[\r\n]/g, '');
+
   // 3. 小写化
   str = str.toLowerCase();
 
   // 4. 去掉首尾空白
   return str.trim();
+}
+
+// (str) => str
+// 普通文本转换成标题函数：先标准化，再加上 #（默认 2 级）
+export function toTocLine(str: string, level = 2): string {
+  const normalized = normalize(str);
+  const hashes = '#'.repeat(level);
+  return `${hashes} ${normalized}`;
 }
 
 // endregion
@@ -156,13 +167,20 @@ export function getTocList(libraryName: LibraryName, relativePath: FileRelativeP
   return tocList;
 }
 
+// matchTocNoThrow(lib, file, tocGlob) - 定位 Markdown 文件中的章节标题，采用模糊匹配。
+// 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
+// 若未找到或匹配不唯一，则返回 null。
+export function matchTocNoThrow(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem[] {
+  const tocList = getTocList(lib, file);
+  const normalizedGlob = normalize(glob);
+  return tocList.filter(item => normalize(item.tocLineContent) === normalizedGlob);
+}
+
 // matchToc(lib, file, tocGlob) - 定位 Markdown 文件中的章节标题，采用模糊匹配。
 // 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
 // 若未找到或匹配不唯一，则抛出错误并说明文件路径与候选标题。
 export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem {
-  const tocList = getTocList(lib, file);
-  const normalizedGlob = normalize(glob);
-  const matches = tocList.filter(item => normalize(item.tocLineContent) === normalizedGlob);
+  const matches = matchTocNoThrow(lib, file, glob);
   checks(matches.length !== 0, `在文件 ${pathForFile(lib, file)} 中未找到与 '${glob}' 匹配的章节标题。`);
   checks(matches.length === 1, `发现多个与 '${glob}' 匹配的章节标题，请提供更精确的标题：\n- ${matches.map(m => m.tocLineContent).join('\n- ')}`);
   return matches[0]!;

@@ -2,7 +2,9 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { getEnvVar, logfile, logfileE, setLogOutputFile } from "../utils.ts";
 import { manualTools } from "./tools/manual.ts";
+import { createFileTool } from "./tools/file.ts";
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import type {McpHandlerDefinition} from "../typings.ts";
 
 // This is the entry point for the v2 server.
 export async function runV2() {
@@ -23,16 +25,19 @@ export async function runV2() {
   });
 
   // Register tools
-  // TODO refactor this to be more safely typed
-  const allTools: Record<string, any> = {};
-  for (const tool of Object.values(manualTools)) {
-    allTools[tool.toolType.name] = tool;
-  }
+  const allTools: Record<McpHandlerDefinition['toolType']['name'], McpHandlerDefinition> = {
+    ...manualTools,
+  };
+  allTools[createFileTool.toolType.name] = createFileTool;
+
+  // Register request handlers
   const toolTypes = Object.values(allTools).map(t => t.toolType);
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: toolTypes,
   }));
 
+  // Handler for CallTool requests
+  // @ts-expect-error too much typing hassle for now
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     logfile('v2', `Received request: ${JSON.stringify(request)}`);
     const { name, arguments: args } = request.params;
@@ -42,7 +47,6 @@ export async function runV2() {
     }
     throw new Error(`Unknown tool: ${name}`);
   });
-
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

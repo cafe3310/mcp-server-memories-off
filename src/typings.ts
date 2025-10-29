@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/consistent-type-definitions,@typescript-eslint/consistent-indexed-object-style */
 // noinspection JSUnusedLocalSymbols
 
-///////////////////////////////////////////////////////////////////////////
 // region 一些 Typing magic
-///////////////////////////////////////////////////////////////////////////
 
 /** 给一个类型加 Tag，让它和 T 产生关联 */
 export type RelatedTo<T> = {
@@ -64,10 +62,8 @@ export type MatchingKeys<T, V> = {
   [K in keyof T]-?: T[K] extends V ? K : never
 }[keyof T];
 
-///////////////////////////////////////////////////////////////////////////
 // endregion
 // region 具体 typings
-///////////////////////////////////////////////////////////////////////////
 
 // 知识库名称
 // 如 "MyProjectDocs"
@@ -143,3 +139,16 @@ export type TocList = TocItem[];
 // 整个文件的所有行
 export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
 
+// endregion
+// region 工具 typings
+
+export type McpHandlerDefinition = {
+  toolType: {
+    name: string;
+    description: string;
+    inputSchema: unknown;
+  };
+  handler: (args: unknown, extra?: unknown) => unknown;
+}
+
+// endregion
