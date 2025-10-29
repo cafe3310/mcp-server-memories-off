@@ -1,4 +1,5 @@
 import {describe, it, expect, beforeEach, spyOn, type Mock, afterAll, jest} from 'bun:test';
+import '../../test/setup';
 
 import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from '../typings';
 
