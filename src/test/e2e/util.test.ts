@@ -50,7 +50,12 @@ export function resetLibAndBootMcp() {
     fs.rmSync(tempLibraryPath, {recursive: true, force: true});
   }
   console.log('Creating test library directory', tempLibraryPath);
-  fs.mkdirSync(tempLibraryPath, {recursive: true});
+  // Create the main directory and all necessary subdirectories
+  fs.mkdirSync(path.join(tempLibraryPath, 'entities'), {recursive: true});
+  fs.mkdirSync(path.join(tempLibraryPath, 'trash'), {recursive: true});
+  fs.mkdirSync(path.join(tempLibraryPath, 'backups'), {recursive: true});
+  fs.mkdirSync(path.join(tempLibraryPath, 'journeys'), {recursive: true});
+
   // Create an empty meta.md file, which is required by the manual tools
   fs.writeFileSync(path.join(tempLibraryPath, 'meta.md'), '');
 

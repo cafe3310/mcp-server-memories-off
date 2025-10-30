@@ -23,7 +23,7 @@ export const readManualTool = {
   },
   handler: (args: unknown) => {
     const {libraryName} = ReadManualInputSchema.parse(args);
-    const lines = readFileLines(libraryName, 'meta.md');
+    const lines = readFileLines(libraryName, 'meta.md', 'root');
     const content = lines.join('\n');
     return `---file-start: ${libraryName}/meta.md---
 ${content}
@@ -50,7 +50,7 @@ export const editManualTool = {
     replace(libraryName, 'meta.md', {
       'type': 'Lines',
       contentLines: oldContent.split('\n'),
-    }, newContent.split('\n'));
+    }, newContent.split('\n'), 'root');
     return `---status: success, message: content updated successfully in meta.md---`;
   },
 };
@@ -71,11 +71,11 @@ export const addManualSectionTool = {
   handler: (args: unknown) => {
     const {libraryName, toc, newContent} = AddManualSectionInputSchema.parse(args);
     // 先看看章节存不存在
-    const tocMatch = matchTocNoThrow(libraryName, 'meta.md', toc);
+    const tocMatch = matchTocNoThrow(libraryName, 'meta.md', toc, 'root');
     if (tocMatch.length > 0) {
-      addInToc(libraryName, 'meta.md', toc, newContent.split('\n'));
+      addInToc(libraryName, 'meta.md', toc, newContent.split('\n'), 'root');
     } else {
-      add(libraryName, 'meta.md', [toTocLine(toc, 2), ...newContent.split('\n')]);
+      add(libraryName, 'meta.md', [toTocLine(toc, 2), ...newContent.split('\n')], 'root');
     }
     return `---status: success, message: content added successfully in meta.md---`;
   },

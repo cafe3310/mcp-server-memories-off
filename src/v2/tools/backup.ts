@@ -1,7 +1,7 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {McpHandlerDefinition} from "../../typings";
-import {getLibraryPath} from '../runtime';
+import {getLibraryPath, getBackupsPath} from '../runtime';
 import shell from 'shelljs';
 import path from 'path';
 import {format} from 'date-fns';
@@ -22,7 +22,7 @@ export const backupLibraryTool: McpHandlerDefinition = {
   handler: (args: unknown) => {
     const {libraryName} = BackupLibraryInputSchema.parse(args);
     const libraryPath = getLibraryPath(libraryName);
-    const backupsDir = path.join(libraryPath, 'backups');
+    const backupsDir = getBackupsPath(libraryName);
 
     // 1. Create backups directory if it doesn't exist
     if (!shell.test('-d', backupsDir)) {
@@ -50,22 +50,22 @@ export const backupLibraryTool: McpHandlerDefinition = {
     const sizeFormatted = formatBytes(sizeInBytes);
 
     const fileCountOutput = shell.exec(`unzip -l "${backupFilePath}" | tail -n 1`, {silent: true}).stdout.trim();
-    const fileCountMatch = fileCountOutput.match(/(\d+)\s+files/);
+    const fileCountMatch = /(\d+)\s+files/.exec(fileCountOutput);
     const fileCount = fileCountMatch ? parseInt(fileCountMatch[1], 10) : 0;
 
     // 5. Return the result
     return yaml.stringify({
       status: 'success',
-      backup_file: backupFilename,
+      backupFile: backupFilename,
       size: sizeFormatted,
-      file_count: fileCount,
+      fileCount: fileCount,
       message: 'Backup created successfully.',
     });
   },
 };
 
 function formatBytes(bytes: number, decimals = 2): string {
-  if (bytes === 0) return '0 Bytes';
+  if (bytes === 0) {return '0 Bytes';}
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];

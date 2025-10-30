@@ -13,8 +13,6 @@ process.env = {
   MEM_LIBRARIES: `${testLibraryName}:${testLibraryPath}`,
 }
 
-import {mock} from 'bun:test';
-
 // This is the same mock data used in the test file.
 // It's centralized here to be preloaded.
 export const MOCK_FILE_CONTENT_LINES = [

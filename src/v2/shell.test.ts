@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach, beforeAll, spyOn, type Mock, afterAll, jest} from 'bun:test';
+import {describe, it, expect, beforeEach, spyOn, type Mock, afterAll, jest} from 'bun:test';
 import '../test/setup';
 
 import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from '../typings';
@@ -56,12 +56,12 @@ describe('shell helpers (basic)', () => {
 
   it('readFileLines', () => {
     shellTestSpy.mockImplementation(() => true); // Mock file does not exist
-    const lines = readFileLines(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH);
+    const lines = readFileLines(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'root');
     expect(lines).toEqual(MOCK_FILE_CONTENT_LINES);
   });
 
   it('getTocList', () => {
-    const toc = getTocList(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH);
+    const toc = getTocList(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'root');
 
     expect(toc.length).toBe(4);
 
@@ -130,13 +130,13 @@ describe('shell TOC operations', () => {
   });
 
   it('matchToc should find a unique TOC item', () => {
-    const tocItem = matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
+    const tocItem = matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', 'root');
     expect(tocItem.lineNumber).toBe(6);
     expect(tocItem.tocLineContent).toBe('## Section 1: Details');
   });
 
   it('matchToc should throw if TOC item not found', () => {
-    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section')).toThrow('中未找到与');
+    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section', 'root')).toThrow('中未找到与');
   });
 
   it('matchToc should throw if TOC item is ambiguous', () => {
@@ -151,7 +151,7 @@ describe('shell TOC operations', () => {
     readSpy.mockImplementation(() => ambiguousTocLines.join('\n'));
 
     // Use the normalized string that causes ambiguity
-    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details')).toThrow('发现多个与');
+    expect(() => matchToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details', 'root')).toThrow('发现多个与');
 
     // Restore the spy to the default mock implementation for subsequent tests
     readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
@@ -159,12 +159,12 @@ describe('shell TOC operations', () => {
 
   it('matchTocNoThrow should return matches without throwing', () => {
     // Case 1: Unique match
-    let matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
+    let matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', 'root');
     expect(matches.length).toBe(1);
     expect(matches[0]!.lineNumber).toBe(6);
 
     // Case 2: No match
-    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section');
+    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section', 'root');
     expect(matches.length).toBe(0);
 
     // Case 3: Ambiguous match
@@ -174,7 +174,7 @@ describe('shell TOC operations', () => {
       '## section 1 (details)',
     ] as FileWholeLines;
     readSpy.mockImplementation(() => ambiguousTocLines.join('\n'));
-    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details');
+    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details', 'root');
     expect(matches.length).toBe(2);
 
     // Restore spy
@@ -194,7 +194,7 @@ describe('shell file content modifications', () => {
 
   it('deleteContent should remove the specified lines from the file', () => {
     const contentToDelete = ['Line to be deleted.'];
-    deleteContent(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToDelete);
+    deleteContent(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToDelete, 'root');
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
@@ -204,7 +204,7 @@ describe('shell file content modifications', () => {
 
   it('add should append content to the end of the file', () => {
     const contentToAdd = ['// New final line'];
-    add(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd);
+    add(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd, 'root');
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
@@ -213,7 +213,7 @@ describe('shell file content modifications', () => {
 
   it('addInToc should add content within a specified TOC section', () => {
     const contentToAdd = ['> A new quote.'];
-    addInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 2: More Details', contentToAdd);
+    addInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 2: More Details', contentToAdd, 'root');
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
@@ -225,7 +225,7 @@ describe('shell file content modifications', () => {
 
   it('deleteInToc should delete content within a specified TOC section', () => {
     const contentToDelete = ['Here is some detail.'];
-    deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete);
+    deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete, 'root');
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
@@ -236,7 +236,7 @@ describe('shell file content modifications', () => {
 
   it('deleteInToc should throw if content is not in the specified TOC section', () => {
     const contentToDelete = ['Final content here.']; // This is in Section 2
-    expect(() => deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete))
+    expect(() => deleteInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToDelete, 'root'))
       .toThrow('未找到匹配的内容块。');
   });
 
@@ -249,7 +249,7 @@ describe('shell file content modifications', () => {
       beginContentLine: 'Here is some detail.',
       endContentLine: 'Here is some detail.'
     } as ContentLocator;
-    replace(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, oldContentLocator, newContent);
+    replace(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, oldContentLocator, newContent, 'root');
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
     expect(writtenContent).toInclude('Replaced content.');
@@ -259,7 +259,7 @@ describe('shell file content modifications', () => {
   it('insertAfter should add content after a specific block', () => {
     const contentToAdd = ['Appended line.'];
     const afterContent = ['This is the introduction.'];
-    insertAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd, afterContent);
+    insertAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, contentToAdd, afterContent, 'root');
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
     const lines = writtenContent.split('\n');
@@ -269,7 +269,7 @@ describe('shell file content modifications', () => {
   it('insertInTocAfter should add content after a specific line within a TOC', () => {
     const contentToAdd = ['A detail about the detail.'];
     const afterContent = ['Here is some detail.'];
-    insertInTocAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToAdd, afterContent);
+    insertInTocAfter(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', contentToAdd, afterContent, 'root');
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
     const lines = writtenContent.split('\n');
@@ -281,7 +281,7 @@ describe('shell file content modifications', () => {
     replaceInToc(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details', {
       type: 'Lines',
       contentLines: ['Here is some detail.']
-    }, newContent);
+    }, newContent, 'root');
 
     expect(fs.writeFileSync).toHaveBeenCalledTimes(1);
     const writtenContent = writeSpy.mock.calls[0]![1] as string;
@@ -312,7 +312,7 @@ describe('createFile', () => {
   it('should create a file if it does not exist', () => {
     shellTestSpy.mockImplementation(() => false); // Mock file does not exist
     const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
-    createFile(MOCK_LIBRARY_NAME, 'new-file.md', newContent);
+    createFile(MOCK_LIBRARY_NAME, 'new-file.md', newContent, 'root');
     expect(writeSpy).toHaveBeenCalledTimes(1);
     expect(writeSpy.mock.calls[0]![1]).toBe('new file content');
   });
@@ -320,6 +320,6 @@ describe('createFile', () => {
   it('should throw an error if the file already exists', () => {
     shellTestSpy.mockImplementation(() => true); // Mock file exists
     const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
-    expect(() => createFile(MOCK_LIBRARY_NAME, 'existing-file.md', newContent)).toThrow('文件已存在，无法创建');
+    expect(() => createFile(MOCK_LIBRARY_NAME, 'existing-file.md', newContent, 'root')).toThrow('文件已存在，无法创建');
   });
 });

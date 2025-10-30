@@ -30,7 +30,7 @@ describe('E2E Entity Tools', () => {
 
     expect(response.result).toContain('success');
 
-    const newFilePath = path.join(tempLibraryPath, `${newEntityName}.md`);
+    const newFilePath = path.join(tempLibraryPath, 'entities', `${newEntityName}.md`);
     const fileExists = fs.existsSync(newFilePath);
     expect(fileExists).toBe(true);
   }, 10000);
@@ -64,7 +64,7 @@ describe('E2E Entity Tools', () => {
     expect(response.result).toContain('4 entities created successfully');
 
     // Verify entity-with-all-fields
-    const path1 = path.join(tempLibraryPath, 'entity-with-all-fields.md');
+    const path1 = path.join(tempLibraryPath, 'entities', 'entity-with-all-fields.md');
     const content1 = fs.readFileSync(path1, 'utf-8');
     expect(content1).toContain('entity type: person');
     expect(content1).toContain('aliases:');
@@ -73,17 +73,17 @@ describe('E2E Entity Tools', () => {
     expect(content1).toContain('This is the content for entity one.');
 
     // Verify entity-with-only-name-and-content
-    const path2 = path.join(tempLibraryPath, 'entity-with-only-name-and-content.md');
+    const path2 = path.join(tempLibraryPath, 'entities', 'entity-with-only-name-and-content.md');
     const content2 = fs.readFileSync(path2, 'utf-8');
     expect(content2).toBe('Content for entity two.');
 
     // Verify entity-with-only-name-and-type
-    const path3 = path.join(tempLibraryPath, 'entity-with-only-name-and-type.md');
+    const path3 = path.join(tempLibraryPath, 'entities', 'entity-with-only-name-and-type.md');
     const content3 = fs.readFileSync(path3, 'utf-8');
     expect(content3).toContain('entity type: place');
 
     // Verify entity-with-only-name
-    const path4 = path.join(tempLibraryPath, 'entity-with-only-name.md');
+    const path4 = path.join(tempLibraryPath, 'entities', 'entity-with-only-name.md');
     const content4 = fs.readFileSync(path4, 'utf-8');
     expect(content4).toBe('');
   }, 10000);
@@ -110,8 +110,8 @@ describe('E2E Entity Tools', () => {
     expect(response.result).toContain('2 entities moved to trash');
 
     // 4. Verify original files are gone
-    const path1 = path.join(tempLibraryPath, 'to-be-deleted-1.md');
-    const path2 = path.join(tempLibraryPath, 'to-be-deleted-2.md');
+    const path1 = path.join(tempLibraryPath, 'entities', 'to-be-deleted-1.md');
+    const path2 = path.join(tempLibraryPath, 'entities', 'to-be-deleted-2.md');
     expect(fs.existsSync(path1)).toBe(false);
     expect(fs.existsSync(path2)).toBe(false);
 
@@ -141,9 +141,9 @@ describe('E2E Entity Tools', () => {
     });
 
     // 3. Verify the combined content
-    expect(response.result).toContain('--- test-library/to-be-read-1.md ---');
+    expect(response.result).toContain('--- test-library/entities/to-be-read-1.md ---');
     expect(response.result).toContain('Content of read 1');
-    expect(response.result).toContain('--- test-library/to-be-read-2.md ---');
+    expect(response.result).toContain('--- test-library/entities/to-be-read-2.md ---');
     expect(response.result).toContain('Content of read 2');
   }, 10000);
 
@@ -220,7 +220,7 @@ Content of section 2.
     // 3. Verify the returned TOC
     const expectedToc = [
       {
-        entity_name: 'entity-with-toc',
+        entityName: 'entity-with-toc',
         toc: [
           'frontmatter',
           '# Introduction',

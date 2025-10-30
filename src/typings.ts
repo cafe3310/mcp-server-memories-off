@@ -140,7 +140,7 @@ export type TocList = TocItem[];
 export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
 
 // YAML Front Matter
-export type FrontMatter = Map<string, any>;
+export type FrontMatter = Map<string, string>;
 
 // endregion
 // region 工具 typings

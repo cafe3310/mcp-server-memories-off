@@ -1,22 +1,22 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {
-  add,
-  createFile,
+  add, addInToc,
+  createFile, deleteFile, deleteInToc,
   getTocList,
   moveFileToTrash,
   readFileLines,
   readFrontMatter,
   readSectionContent,
-  renameFile,
+  renameFile, replaceSection,
   writeFileLines,
   writeFrontMatter
 } from '../shell';
-import type {McpHandlerDefinition, FileWholeLines, FrontMatter} from "../../typings";
+import type {McpHandlerDefinition, FileWholeLines, FrontMatter, FileRelativePath} from "../../typings";
 import yaml from 'yaml';
 import shell from 'shelljs';
 import path from 'path';
-import {getLibraryPath} from '../runtime';
+import {getEntitiesPath} from "../runtime.ts";
 
 // Zod schema for the createEntity tool
 export const CreateEntityInputSchema = z.object({
@@ -83,7 +83,7 @@ export const addEntitiesTool = {
       if (entity.content) {
         add(libraryName, relativePath, entity.content.split('\n'));
       }
-      
+
       createdEntityNames.push(entity.name);
     }
 
@@ -139,7 +139,7 @@ export const readEntitiesTool = {
       const relativePath = `${entityName}.md`;
       const lines = readFileLines(libraryName, relativePath);
       const content = lines.join('\n');
-      combinedContent += `--- ${libraryName}/${relativePath} ---\n${content}\n`;
+      combinedContent += `--- ${libraryName}/entities/${relativePath} ---\n${content}\n`;
     }
 
     return combinedContent;
@@ -161,13 +161,13 @@ export const listEntitiesTool = {
   },
   handler: (args: unknown) => {
     const {libraryName, entityGlob} = ListEntitiesInputSchema.parse(args);
-    const libPath = getLibraryPath(libraryName);
+    const libPath = getEntitiesPath(libraryName);
     const globPattern = entityGlob ? `${entityGlob}.md` : '*.md';
-    
+
     const files = shell.ls(path.join(libPath, globPattern));
-    
+
     const entityNames = files.map(file => path.basename(file, '.md'));
-    
+
     return `---status: success, message: ${entityNames.length} entities found, entities: ${entityNames.join(',')}---`;
   },
 };
@@ -187,7 +187,7 @@ export const getEntitiesTocTool = {
   },
   handler: (args: unknown) => {
     const {libraryName, entityNames} = GetEntitiesTocInputSchema.parse(args);
-    
+
     const results = entityNames.map(entityName => {
       const relativePath = `${entityName}.md`;
       const tocList = getTocList(libraryName, relativePath);
@@ -197,9 +197,9 @@ export const getEntitiesTocTool = {
       if (fileLines[0] === '---') {
         toc.unshift('frontmatter');
       }
-      return { entity_name: entityName, toc };
+      return { entityName: entityName, toc };
     });
-    
+
     return yaml.stringify(results);
   },
 };
@@ -220,7 +220,7 @@ export const renameEntityTool = {
   },
   handler: (args: unknown) => {
     const { libraryName, oldName, newName } = RenameEntityInputSchema.parse(args);
-    const libPath = getLibraryPath(libraryName);
+    const entitiesPath = getEntitiesPath(libraryName);
     const oldRelativePath = `${oldName}.md`;
     const newRelativePath = `${newName}.md`;
 
@@ -228,13 +228,13 @@ export const renameEntityTool = {
     renameFile(libraryName, oldRelativePath, newRelativePath);
 
     // 2. Find and update incoming relations
-    const grepResults = shell.grep('-l', `relation to: ${oldName}`, path.join(libPath, '*.md'));
+    const grepResults = shell.grep('-l', `relation to: ${oldName}`, path.join(entitiesPath, '*.md'));
     const affectedFiles = grepResults.stdout.trim().split('\n').filter(Boolean);
-    
+
     for (const file of affectedFiles) {
-      const relativePath = path.relative(libPath, file);
+      const relativePath = path.relative(entitiesPath, file);
       const lines = readFileLines(libraryName, relativePath);
-      const updatedLines = lines.map(line => 
+      const updatedLines = lines.map(line =>
         line.includes(`relation to: ${oldName}`) ? line.replace(`relation to: ${oldName}`, `relation to: ${newName}`) : line
       );
       writeFileLines(libraryName, relativePath, updatedLines as FileWholeLines);
@@ -260,7 +260,7 @@ export const readEntitiesSectionsTool = {
   },
   handler: (args: unknown) => {
     const {libraryName, entityNames, sectionGlobs} = ReadEntitiesSectionsInputSchema.parse(args);
-    const results: { entity_name: string; section: string; content: string }[] = [];
+    const results: { entityName: string; section: string; content: string }[] = [];
 
     for (const entityName of entityNames) {
       const relativePath = `${entityName}.md`;
@@ -269,11 +269,11 @@ export const readEntitiesSectionsTool = {
           const frontmatter = readFrontMatter(libraryName, relativePath);
           if (frontmatter) {
             const content = yaml.stringify(Object.fromEntries(frontmatter));
-            results.push({ entity_name: entityName, section: sectionGlob, content });
+            results.push({ entityName: entityName, section: sectionGlob, content });
           }
         } else {
           const sectionContentLines = readSectionContent(libraryName, relativePath, sectionGlob);
-          results.push({ entity_name: entityName, section: sectionGlob, content: sectionContentLines.join('\n') });
+          results.push({ entityName: entityName, section: sectionGlob, content: sectionContentLines.join('\n') });
         }
       }
     }
@@ -370,11 +370,11 @@ export const mergeEntitiesTool = {
     const { libraryName, sourceNames, targetName } = MergeEntitiesInputSchema.parse(args);
     const targetRelativePath = `${targetName}.md`;
 
-    const targetFrontmatter = readFrontMatter(libraryName, targetRelativePath) ?? new Map();
+    const targetFrontmatter = readFrontMatter(libraryName, targetRelativePath) ?? new Map() as FrontMatter;
     const targetContent = readFileLines(libraryName, targetRelativePath);
 
     const mergedContent = [...targetContent];
-    
+
     for (const sourceName of sourceNames) {
       const sourceRelativePath = `${sourceName}.md`;
       const sourceFrontmatter = readFrontMatter(libraryName, sourceRelativePath);
@@ -384,23 +384,23 @@ export const mergeEntitiesTool = {
       if (sourceFrontmatter) {
         for (const [key, value] of sourceFrontmatter.entries()) {
           if (targetFrontmatter.has(key) && Array.isArray(targetFrontmatter.get(key))) {
-            const targetArray = targetFrontmatter.get(key);
-            const sourceArray = Array.isArray(value) ? value : [value];
+            const targetArray: unknown = targetFrontmatter.get(key);
+            const sourceArray: string[] = Array.isArray(value) ? value : [value];
             targetFrontmatter.set(key, [...new Set([...targetArray, ...sourceArray])]);
           } else {
             targetFrontmatter.set(key, value);
           }
         }
       }
-      
+
       // Merge content
       mergedContent.push(`\n---\n\n## Content from ${sourceName}\n\n`);
       mergedContent.push(...sourceContent);
-      
+
       // Delete source entity
       deleteFile(libraryName, sourceRelativePath);
     }
-    
+
     writeFrontMatter(libraryName, targetRelativePath, targetFrontmatter);
     add(libraryName, targetRelativePath, mergedContent);
 
@@ -423,32 +423,32 @@ export const garbageCollectRelationsTool = {
   },
   handler: (args: unknown) => {
     const { libraryName, dryRun } = GarbageCollectRelationsInputSchema.parse(args);
-    const libPath = getLibraryPath(libraryName);
-    const allEntityFiles = shell.ls(path.join(libPath, '*.md'));
+    const entitiesPath = getEntitiesPath(libraryName);
+    const allEntityFiles = shell.ls(path.join(entitiesPath, '*.md'));
     const allEntityNames = new Set(allEntityFiles.map(file => path.basename(file, '.md')));
-    
-    const danglingRelations: { in_entity: string; relation_to: string; type: string }[] = [];
+
+    const danglingRelations: { inEntity: string; relationTo: string; type: string }[] = [];
     const affectedEntities = new Map<string, FrontMatter>();
 
     for (const entityFile of allEntityFiles) {
       const entityName = path.basename(entityFile, '.md');
       const relativePath = `${entityName}.md`;
       const frontmatter = readFrontMatter(libraryName, relativePath);
-      
-      if (frontmatter && frontmatter.has('relations')) {
+
+      if (frontmatter?.has('relations')) {
         const relations = frontmatter.get('relations') as { 'relation to': string; 'relation type': string }[];
         const validRelations = [];
         let hasDangling = false;
-        
+
         for (const relation of relations) {
           if (allEntityNames.has(relation['relation to'])) {
             validRelations.push(relation);
           } else {
-            danglingRelations.push({ in_entity: entityName, relation_to: relation['relation to'], type: relation['relation type'] });
+            danglingRelations.push({ inEntity: entityName, relationTo: relation['relation to'], type: relation['relation type'] });
             hasDangling = true;
           }
         }
-        
+
         if (hasDangling && !dryRun) {
           frontmatter.set('relations', validRelations);
           affectedEntities.set(relativePath, frontmatter);
@@ -462,7 +462,7 @@ export const garbageCollectRelationsTool = {
       }
       return `---status: success, cleaned_relations_count: ${danglingRelations.length}, affected_entities: ${[...affectedEntities.keys()]}---`;
     } else {
-      return yaml.stringify({ dangling_relations_found: danglingRelations });
+      return yaml.stringify({ danglingRelationsFound: danglingRelations });
     }
   },
 };

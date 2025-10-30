@@ -1,6 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ChildProcess } from 'node:child_process';
-import fs from 'node:fs';
 import {
   killMcp,
   resetLibAndBootMcp,

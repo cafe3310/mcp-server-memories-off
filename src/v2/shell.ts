@@ -1,10 +1,11 @@
 import shell from "shelljs";
 import path from 'path';
-import {getLibraryPath} from './runtime.ts';
+import {getLibraryPath, getEntitiesPath, getTrashPath} from './runtime.ts';
+
 import {checks} from '../utils.ts';
 
 import fs from 'fs';
-import {
+import type {
   ContentExactLine,
   ContentLocator,
   FileAbsolutePath,
@@ -12,7 +13,6 @@ import {
   FileWholeLines,
   FrontMatter,
   LibraryName,
-  LibraryPath,
   LineNumber,
   TocGlob,
   TocItem,
@@ -85,16 +85,11 @@ export function linesReplace(lines: FileWholeLines,
 // endregion
 // region 路径操作
 
-// (LibraryName) => LibraryPath
-// 获取知识库目录绝对路径
-function pathForLib(libraryName: LibraryName): LibraryPath {
-  return getLibraryPath(libraryName) as LibraryPath;
-}
-
 // (LibraryName, FileRelativePath) => FileAbsolutePath
 // 获取知识库内文件的绝对路径
-function pathForFile(libraryName: LibraryName, relativePath: FileRelativePath): FileAbsolutePath {
-  return path.join(pathForLib(libraryName), relativePath) as FileAbsolutePath;
+function pathForFile(libraryName: LibraryName, relativePath: FileRelativePath, location: 'entities' | 'root' = 'entities'): FileAbsolutePath {
+  const basePath = (location === 'entities') ? getEntitiesPath(libraryName) : getLibraryPath(libraryName);
+  return path.join(basePath, relativePath) as FileAbsolutePath;
 }
 
 // endregion
@@ -130,8 +125,8 @@ export function toTocLine(str: string, level = 2): string {
 // endregion
 // region 文件直接读写
 
-export function readFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath): FrontMatter | null {
-  const lines = readFileLines(libraryName, relativePath);
+export function readFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath, location: 'entities' | 'root' = 'entities'): FrontMatter | null {
+  const lines = readFileLines(libraryName, relativePath, location);
   if (lines.length === 0 || lines[0] !== '---') {
     return null;
   }
@@ -140,15 +135,15 @@ export function readFrontMatter(libraryName: LibraryName, relativePath: FileRela
     return null; // Malformed frontmatter
   }
   const yamlLines = lines.slice(1, endIndex);
-  const parsed = yaml.parse(yamlLines.join('\n'));
+  const parsed: unknown = yaml.parse(yamlLines.join('\n'));
   if (typeof parsed !== 'object' || parsed === null) {
     return new Map();
   }
   return new Map(Object.entries(parsed));
 }
 
-export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath, data: FrontMatter): void {
-  const lines = readFileLines(libraryName, relativePath);
+export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath, data: FrontMatter, location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
   const startIndex = lines.indexOf('---');
   const endIndex = startIndex !== -1 ? lines.indexOf('---', startIndex + 1) : -1;
 
@@ -169,13 +164,13 @@ export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRel
     finalLines = body;
   }
 
-  writeFileLines(libraryName, relativePath, finalLines as FileWholeLines);
+  writeFileLines(libraryName, relativePath, finalLines as FileWholeLines, location);
 }
 
-export function readSectionContent(libraryName: LibraryName, relativePath: FileRelativePath, tocGlob: TocGlob): string[] {
-  const lines = readFileLines(libraryName, relativePath);
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, tocGlob);
+export function readSectionContent(libraryName: LibraryName, relativePath: FileRelativePath, tocGlob: TocGlob, location: 'entities' | 'root' = 'entities'): string[] {
+  const lines = readFileLines(libraryName, relativePath, location);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, tocGlob, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
@@ -193,8 +188,8 @@ export function readSectionContent(libraryName: LibraryName, relativePath: FileR
 
 // (LibraryName, FileRelativePath) => FileWholeLines
 // 读取文件的所有行
-export function readFileLines(libraryName: LibraryName, relativePath: FileRelativePath): FileWholeLines {
-  const fullPath = pathForFile(libraryName, relativePath);
+export function readFileLines(libraryName: LibraryName, relativePath: FileRelativePath, location: 'entities' | 'root' = 'entities'): FileWholeLines {
+  const fullPath = pathForFile(libraryName, relativePath, location);
   checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
   const fileContent = fs.readFileSync(fullPath, 'utf-8');
   if (fileContent === '') {
@@ -206,8 +201,8 @@ export function readFileLines(libraryName: LibraryName, relativePath: FileRelati
 
 // (LibraryName, FileRelativePath, FileWholeLines) => void
 // 写入文件的所有行
-export function writeFileLines(libraryName: LibraryName, relativePath: FileRelativePath, lines: FileWholeLines): void {
-  const fullPath = pathForFile(libraryName, relativePath);
+export function writeFileLines(libraryName: LibraryName, relativePath: FileRelativePath, lines: FileWholeLines, location: 'entities' | 'root' = 'entities'): void {
+  const fullPath = pathForFile(libraryName, relativePath, location);
   const content = lines.join('\n');
   fs.writeFileSync(fullPath, content, 'utf-8');
 }
@@ -217,9 +212,9 @@ export function writeFileLines(libraryName: LibraryName, relativePath: FileRelat
 
 // getTocList(lib, fileRelPath)
 // 获取文件中的所有章节标题及其行号的映射，返回 TocList
-export function getTocList(libraryName: LibraryName, relativePath: FileRelativePath): TocList {
+export function getTocList(libraryName: LibraryName, relativePath: FileRelativePath, location: 'entities' | 'root' = 'entities'): TocList {
   const tocList: TocList = [];
-  readFileLines(libraryName, relativePath)
+  readFileLines(libraryName, relativePath, location)
     .forEach((line, index) => {
       if (line.startsWith('#')) {
         const level = (/^#+/.exec(line))?.[0].length ?? 1;
@@ -236,8 +231,8 @@ export function getTocList(libraryName: LibraryName, relativePath: FileRelativeP
 // matchTocNoThrow(lib, file, tocGlob) - 定位 Markdown 文件中的章节标题，采用模糊匹配。
 // 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
 // 若未找到或匹配不唯一，则返回 null。
-export function matchTocNoThrow(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem[] {
-  const tocList = getTocList(lib, file);
+export function matchTocNoThrow(lib: LibraryName, file: FileRelativePath, glob: TocGlob, location: 'entities' | 'root' = 'entities'): TocItem[] {
+  const tocList = getTocList(lib, file, location);
   const normalizedGlob = normalize(glob);
   return tocList.filter(item => normalize(item.tocLineContent) === normalizedGlob);
 }
@@ -245,9 +240,9 @@ export function matchTocNoThrow(lib: LibraryName, file: FileRelativePath, glob: 
 // matchToc(lib, file, tocGlob) - 定位 Markdown 文件中的章节标题，采用模糊匹配。
 // 匹配方式：标准化后的字符串相等即视为匹配。若找到唯一匹配，返回对应的 `TocBlock`（包含行号与原始标题行）；
 // 若未找到或匹配不唯一，则抛出错误并说明文件路径与候选标题。
-export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob): TocItem {
-  const matches = matchTocNoThrow(lib, file, glob);
-  checks(matches.length !== 0, `在文件 ${pathForFile(lib, file)} 中未找到与 '${glob}' 匹配的章节标题。`);
+export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob, location: 'entities' | 'root' = 'entities'): TocItem {
+  const matches = matchTocNoThrow(lib, file, glob, location);
+  checks(matches.length !== 0, `在文件 ${pathForFile(lib, file, location)} 中未找到与 '${glob}' 匹配的章节标题。`);
   checks(matches.length === 1, `发现多个与 '${glob}' 匹配的章节标题，请提供更精确的标题：\n- ${matches.map(m => m.tocLineContent).join('\n- ')}`);
   return matches[0]!;
 }
@@ -258,8 +253,8 @@ export function matchToc(lib: LibraryName, file: FileRelativePath, glob: TocGlob
 //   - replace(path, oldContent: ContentBlock, newContent: ContentBlock): void
 //     将文件中唯一匹配的 oldContent 替换为 newContent。
 //     如果未找到唯一匹配，则抛错。
-export function replace(libraryName: LibraryName, relativePath: FileRelativePath, oldContent: ContentLocator, newContent: ContentExactLine[]): void {
-  const lines = readFileLines(libraryName, relativePath);
+export function replace(libraryName: LibraryName, relativePath: FileRelativePath, oldContent: ContentLocator, newContent: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
   let updatedLines: FileWholeLines = [];
   if (oldContent.type === 'NumbersAndLines') {
     linesVerifyBeginEnd(lines, oldContent.beginLineNumber, oldContent.endLineNumber, oldContent.beginContentLine, oldContent.endContentLine);
@@ -270,19 +265,19 @@ export function replace(libraryName: LibraryName, relativePath: FileRelativePath
     updatedLines = linesReplace(lines, beginLineNo, endLineNo, newContent);
   }
   checks(updatedLines && updatedLines.length > 0, `替换逻辑未执行，原因未知。`);
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 //   - replaceInToc(path, toc: TocGlob, oldContent: ContentBlock, newContent: ContentExactLine[]): void
 //     在 toc 指定的章节下，将唯一匹配的 oldContent 替换为 newContent。
 //     如果 toc 未找到或不唯一，或 oldContent 未找到或不唯一，则抛错。
-export function replaceInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, oldContent: ContentLocator, newContent: ContentExactLine[]): void {
+export function replaceInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, oldContent: ContentLocator, newContent: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
   // 1. 读取文件内容
-  const lines = readFileLines(libraryName, relativePath);
+  const lines = readFileLines(libraryName, relativePath, location);
 
   // 2. 定位 toc 并确认其唯一性
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, toc, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   // 3. 在 tocList 中找到下一个标题行，确定章节范围
@@ -322,14 +317,14 @@ export function replaceInToc(libraryName: LibraryName, relativePath: FileRelativ
   const updatedLines = linesReplace(lines, beginLineNo, endLineNo, newContent);
 
   // 6. 写回文件 (use helper)
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 //   - insertAfter(path, content: ContentExactLine[], afterContent: ContentGlobLine): void
 //     在文件中唯一匹配的 afterContent 之后插入 content。
 //     如果未找到唯一匹配，则抛错。
-export function insertAfter(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[], afterContent: ContentExactLine[]): void {
-  const lines = readFileLines(libraryName, relativePath);
+export function insertAfter(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[], afterContent: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
   const afterLineNo = linesMatchContent(lines, afterContent);
   const updatedLines = linesReplace(
     lines,
@@ -337,21 +332,21 @@ export function insertAfter(libraryName: LibraryName, relativePath: FileRelative
     afterLineNo + afterContent.length - 1,
     [...afterContent, ...content]
   );
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 //   - insertInTocAfter(path, toc: TocGlob, content: ContentExactLine[], afterContent: ContentGlobLine): void
 //     在 toc 指定的章节下、唯一匹配的 afterContent 之后插入 content。
 //     如果 toc 未找到或不唯一，或 afterContent 未找到或不唯一，则抛错。
 //
-export function insertInTocAfter(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], afterContent: ContentExactLine[]): void {
+export function insertInTocAfter(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], afterContent: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
 
   // 1. 读取文件内容
-  const lines = readFileLines(libraryName, relativePath);
+  const lines = readFileLines(libraryName, relativePath, location);
 
   // 2. 定位 toc 并确认其唯一性
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, toc, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   // 3. 在 tocList 中找到下一个标题行，确定章节范围
@@ -377,16 +372,16 @@ export function insertInTocAfter(libraryName: LibraryName, relativePath: FileRel
   );
 
   // 6. 写回文件 (use helper)
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 //   - add(path, content: ContentExactLine[]): void
 //     在文件末尾添加 content。
 //
-export function add(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[]): void {
-  const lines = readFileLines(libraryName, relativePath);
+export function add(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
   const updatedLines = [...lines, ...content] as FileWholeLines;
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 
@@ -395,14 +390,14 @@ export function add(libraryName: LibraryName, relativePath: FileRelativePath, co
 //     如果 toc 未找到或不唯一，则抛错。
 //     content 会被添加在 toc 之后、任何新标题行之前。
 //
-export function addInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
+export function addInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
 
   // 1. 读取文件内容
-  const lines = readFileLines(libraryName, relativePath);
+  const lines = readFileLines(libraryName, relativePath, location);
 
   // 2. 定位 toc 并确认其唯一性
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, toc, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   // 3. 在 tocList 中找到下一个标题行，确定插入位置
@@ -420,10 +415,10 @@ export function addInToc(libraryName: LibraryName, relativePath: FileRelativePat
       insertLineNumber,
       [...content, targetLineContent ?? '']
     );
-    writeFileLines(libraryName, relativePath, updatedLines);
+    writeFileLines(libraryName, relativePath, updatedLines, location);
   } else {
     updatedLines = [...lines, ...content] as FileWholeLines;
-    writeFileLines(libraryName, relativePath, updatedLines);
+    writeFileLines(libraryName, relativePath, updatedLines, location);
   }
 }
 
@@ -432,25 +427,25 @@ export function addInToc(libraryName: LibraryName, relativePath: FileRelativePat
 //     删除文件中唯一匹配的 content。
 //     如果未找到唯一匹配，则抛错。
 //
-export function deleteContent(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[]): void {
-  const lines = readFileLines(libraryName, relativePath);
+export function deleteContent(libraryName: LibraryName, relativePath: FileRelativePath, content: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
   const beginLineNo = linesMatchContent(lines, content);
   const endLineNo = beginLineNo + content.length - 1;
   const updatedLines = linesReplace(lines, beginLineNo, endLineNo, []);
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 
 //   - deleteInToc(path, toc: TocGlob, content): void
 //     在 toc 指定的章节下删除唯一匹配的 content。
 //     如果 toc 未找到或不唯一，或 content 未找到或不唯一，则抛错。
-export function deleteInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
+export function deleteInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[], location: 'entities' | 'root' = 'entities'): void {
   // 1. 读取文件内容
-  const lines = readFileLines(libraryName, relativePath);
+  const lines = readFileLines(libraryName, relativePath, location);
 
   // 2. 定位 toc 并确认其唯一性
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, toc);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, toc, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   // 3. 在 tocList 中找到下一个标题行，确定章节范围
@@ -472,13 +467,13 @@ export function deleteInToc(libraryName: LibraryName, relativePath: FileRelative
   const updatedLines = linesReplace(lines, beginLineNo, endLineNo, []);
 
   // 6. 写回文件 (use helper)
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
-export function replaceSection(libraryName: LibraryName, relativePath: FileRelativePath, oldTocGlob: TocGlob, newHeading: string, newBodyContent: string[]): void {
-  const lines = readFileLines(libraryName, relativePath);
-  const tocList = getTocList(libraryName, relativePath);
-  const matchedToc = matchToc(libraryName, relativePath, oldTocGlob);
+export function replaceSection(libraryName: LibraryName, relativePath: FileRelativePath, oldTocGlob: TocGlob, newHeading: string, newBodyContent: string[], location: 'entities' | 'root' = 'entities'): void {
+  const lines = readFileLines(libraryName, relativePath, location);
+  const tocList = getTocList(libraryName, relativePath, location);
+  const matchedToc = matchToc(libraryName, relativePath, oldTocGlob, location);
   const tocLineNumber = matchedToc.lineNumber;
 
   const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
@@ -490,7 +485,7 @@ export function replaceSection(libraryName: LibraryName, relativePath: FileRelat
   const newSectionLines = [newHeading, ...newBodyContent];
   const updatedLines = linesReplace(lines, sectionStartLineNumber, sectionEndLineNumber, newSectionLines);
 
-  writeFileLines(libraryName, relativePath, updatedLines);
+  writeFileLines(libraryName, relativePath, updatedLines, location);
 }
 
 export function moveFileToTrash(libraryName: LibraryName, relativePath: FileRelativePath): void {
@@ -505,7 +500,7 @@ export function moveFileToTrash(libraryName: LibraryName, relativePath: FileRela
     now.getMinutes().toString().padStart(2, '0') +
     now.getSeconds().toString().padStart(2, '0');
 
-  const trashDir = path.join(pathForLib(libraryName), 'trash');
+  const trashDir = getTrashPath(libraryName);
   if (!shell.test('-d', trashDir)) {
     shell.mkdir('-p', trashDir);
   }
@@ -529,10 +524,10 @@ export function deleteFile(libraryName: LibraryName, relativePath: FileRelativeP
  * @param relativePath The path for the new file, relative to the library root.
  * @param content The content to write to the file.
  */
-export function createFile(libraryName: LibraryName, relativePath: FileRelativePath, content: FileWholeLines): void {
-  const fullPath = pathForFile(libraryName, relativePath);
+export function createFile(libraryName: LibraryName, relativePath: FileRelativePath, content: FileWholeLines, location: 'entities' | 'root' = 'entities'): void {
+  const fullPath = pathForFile(libraryName, relativePath, location);
   checks(!shell.test('-e', fullPath), `文件已存在，无法创建: ${fullPath}`);
-  writeFileLines(libraryName, relativePath, content);
+  writeFileLines(libraryName, relativePath, content, location);
 }
 
 export function renameFile(libraryName: LibraryName, oldRelativePath: FileRelativePath, newRelativePath: FileRelativePath): void {
