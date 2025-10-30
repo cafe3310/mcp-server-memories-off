@@ -51,28 +51,23 @@ relations:
 - **功能**: 读取 `meta.md` 的全部内容。
 - **返回**: `meta.md` 文件的原始内容 (纯文本)。
 
-#### `update_manual_section(library_name, toc, old_content, new_content)`
-- **功能**: 更新 `meta.md` 中指定章节 (`toc`) 的内容。
+#### `edit_manual_section(library_name, old_content, new_content)`
+- **功能**: 通过精确匹配 `old_content` 并替换为 `new_content` 来更新 `meta.md` 的内容。此工具可用于修改、增加甚至删除内容（将 `new_content` 设为空字符串）。
+- **参数**:
+  - `old_content`: 需要被替换的、完全匹配的旧内容（可为多行）。
+  - `new_content`: 用于替换的新内容（可为多行）。
 - **返回**: 一个确认对象。
   ```yaml
   status: success
-  message: "Section '## 建议的实体类型' in meta.md was updated."
+  message: "Content updated successfully in meta.md."
   ```
 
 #### `add_manual_section(library_name, toc, new_content)`
-- **功能**: 在 `meta.md` 指定章节末尾追加内容。
+- **功能**: 在 `meta.md` 的指定章节（`toc`）末尾追加内容。如果章节不存在，则会创建新章节。
 - **返回**: 一个确认对象。
   ```yaml
   status: success
   message: "Content added to section '## 内容模板' in meta.md."
-  ```
-
-#### `delete_manual_section(library_name, toc, deleting_content)`
-- **功能**: 删除 `meta.md` 指定章节内的部分内容。
-- **返回**: 一个确认对象。
-  ```yaml
-  status: success
-  message: "Content removed from section '## 内容模板' in meta.md."
   ```
 
 ### 4.2. `relation` 系列
@@ -104,6 +99,14 @@ relations:
   ```
 
 ### 4.3. `entity` 系列
+
+#### `create_entity(library_name, entity_name)`
+- **功能**: 在指定的知识库中创建一个新的实体（即一个 .md 文件）。
+- **返回**: 一个确认对象。
+  ```yaml
+  status: success
+  message: "entity new-entity created successfully in library test-library"
+  ```
 
 #### `list_entities(library_name, entity_glob)`
 - **功能**: 基于 `glob` 模式列出实体。

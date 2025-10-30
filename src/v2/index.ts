@@ -2,6 +2,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { getEnvVar, logfile, setLogOutputFile } from "../utils.ts";
 import { manualTools } from "./tools/manual.ts";
+import { entityTools } from "./tools/entity.ts";
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type {McpHandlerDefinition} from "../typings.ts";
 
@@ -24,7 +25,7 @@ export async function runV2() {
   });
 
   // Register tools
-  const allTools = [...manualTools ];
+  const allTools = [...manualTools, ...entityTools];
 
   // Register request handlers
   const toolTypes = Object.values(allTools).map(t => t.toolType);
