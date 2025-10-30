@@ -6,3 +6,4 @@
 - **2025-10-26**: [**实现版本路由**] - 将 `utils.ts` 提取为共享模块。在 `src/index.ts` 中增加了版本选择逻辑，可通过环境变量 `MEM_VERSION=2` 启动一个空的 v2 服务器，否则默认启动 v1。
 - **2025-10-27**: [**实现 v2 `manual` 工具集**] - 添加了 `shelljs` 和 `yargs` 依赖。创建了 `v2/runtime.ts` 用于解析命令行参数，`v2/shell.ts` 用于封装文件操作。实现了 `read_manual` 和 `update_manual_section` 工具，并将其集成到 v2 服务器。在经历了多次调试后，最终确认 MCP 的 `list_tools` 方法应为 `tools/list`，并成功验证了 v1 和 v2 服务。
 - **2025-10-30**: [**完善 `manual` 工具集并引入 `file` 工具集**] - 实现了 `addManualSection` 和一个更通用的 `editManualSection`（取代了原设计的 `update` 和 `delete`）。引入了基础的 `createFile` 工具。同时，将 `test` 目录迁移至 `src` 下，并编写了完整的 E2E 测试验证 `manual` 工具的功能。
+- **2025-10-30**: [**实现 `entity` 基础工具集**] - 实现了 `createEntity`, `addEntities`, `deleteEntities`, `readEntities`, `listEntities`, `getEntitiesToc`, `renameEntity` 等核心工具。完成了对 `entity` 工具集的现状分析，明确了后续需要开发的高级功能（如内容编辑、合并、垃圾回收等）。

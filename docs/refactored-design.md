@@ -118,21 +118,18 @@ relations:
   ```
 
 #### `add_entities(library_name, entities)`
-- **功能**: 批量创建新实体。
-- **返回**: 成功创建的实体名称列表。
-  ```yaml
-  created_entities:
-    - new-entity-1
-    - new-entity-2
+- **功能**: 批量创建新实体，可包含初始内容和元数据。
+- **参数 `entities`**: 一个实体对象数组，每个对象包含 `name`, `type` (可选), `aliases` (可选), `content` (可选)。
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: 2 entities created successfully, created_entities: new-entity-1,new-entity-2---
   ```
 
 #### `delete_entities(library_name, entity_names)`
-- **功能**: 批量删除实体。
-- **返回**: 成功删除的实体名称列表。
-  ```yaml
-  deleted_entities:
-    - old-entity-1
-    - old-entity-2
+- **功能**: 将指定的实体移动到知识库的 `trash` 目录中（软删除）。
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: 2 entities moved to trash, deleted_entities: old-entity-1,old-entity-2---
   ```
 
 #### `read_entities(library_name, entity_names)`

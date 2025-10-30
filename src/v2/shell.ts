@@ -412,6 +412,36 @@ export function deleteInToc(libraryName: LibraryName, relativePath: FileRelative
   writeFileLines(libraryName, relativePath, updatedLines);
 }
 
+export function moveFileToTrash(libraryName: LibraryName, relativePath: FileRelativePath): void {
+  const fullPath = pathForFile(libraryName, relativePath);
+  checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
+
+  const now = new Date();
+  const timestamp = now.getFullYear().toString() +
+    (now.getMonth() + 1).toString().padStart(2, '0') +
+    now.getDate().toString().padStart(2, '0') +
+    now.getHours().toString().padStart(2, '0') +
+    now.getMinutes().toString().padStart(2, '0') +
+    now.getSeconds().toString().padStart(2, '0');
+
+  const trashDir = path.join(pathForLib(libraryName), 'trash');
+  if (!shell.test('-d', trashDir)) {
+    shell.mkdir('-p', trashDir);
+  }
+
+  const parsedPath = path.parse(relativePath);
+  const newName = `${parsedPath.name}-${timestamp}${parsedPath.ext}`;
+  const newPath = path.join(trashDir, newName);
+
+  shell.mv(fullPath, newPath);
+}
+
+export function deleteFile(libraryName: LibraryName, relativePath: FileRelativePath): void {
+  const fullPath = pathForFile(libraryName, relativePath);
+  checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
+  shell.rm(fullPath);
+}
+
 /**
  * Creates a new file with the given content.
  * @param libraryName The name of the library.
@@ -422,5 +452,13 @@ export function createFile(libraryName: LibraryName, relativePath: FileRelativeP
   const fullPath = pathForFile(libraryName, relativePath);
   checks(!shell.test('-e', fullPath), `文件已存在，无法创建: ${fullPath}`);
   writeFileLines(libraryName, relativePath, content);
+}
+
+export function renameFile(libraryName: LibraryName, oldRelativePath: FileRelativePath, newRelativePath: FileRelativePath): void {
+  const oldFullPath = pathForFile(libraryName, oldRelativePath);
+  const newFullPath = pathForFile(libraryName, newRelativePath);
+  checks(shell.test('-f', oldFullPath), `无法找到源文件: ${oldFullPath}`);
+  checks(!shell.test('-e', newFullPath), `目标文件已存在，无法重命名: ${newFullPath}`);
+  shell.mv(oldFullPath, newFullPath);
 }
 
