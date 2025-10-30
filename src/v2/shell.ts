@@ -4,12 +4,13 @@ import {getLibraryPath} from './runtime.ts';
 import {checks} from '../utils.ts';
 
 import fs from 'fs';
-import type {
+import {
   ContentExactLine,
   ContentLocator,
   FileAbsolutePath,
   FileRelativePath,
   FileWholeLines,
+  FrontMatter,
   LibraryName,
   LibraryPath,
   LineNumber,
@@ -17,6 +18,7 @@ import type {
   TocItem,
   TocList
 } from "../typings.ts";
+import yaml from 'yaml';
 
 // 我们对内容的替换基于行，和 array.shift 类似。
 // 我们对标题（toc）行的操作基本上使用模糊匹配。
@@ -127,6 +129,67 @@ export function toTocLine(str: string, level = 2): string {
 
 // endregion
 // region 文件直接读写
+
+export function readFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath): FrontMatter | null {
+  const lines = readFileLines(libraryName, relativePath);
+  if (lines.length === 0 || lines[0] !== '---') {
+    return null;
+  }
+  const endIndex = lines.indexOf('---', 1);
+  if (endIndex === -1) {
+    return null; // Malformed frontmatter
+  }
+  const yamlLines = lines.slice(1, endIndex);
+  const parsed = yaml.parse(yamlLines.join('\n'));
+  if (typeof parsed !== 'object' || parsed === null) {
+    return new Map();
+  }
+  return new Map(Object.entries(parsed));
+}
+
+export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRelativePath, data: FrontMatter): void {
+  const lines = readFileLines(libraryName, relativePath);
+  const startIndex = lines.indexOf('---');
+  const endIndex = startIndex !== -1 ? lines.indexOf('---', startIndex + 1) : -1;
+
+  const body = (startIndex !== -1 && endIndex !== -1) ? lines.slice(endIndex + 1) : lines;
+
+  let finalLines: string[];
+  if (data.size > 0) {
+    const obj = Object.fromEntries(data);
+    const yamlString = yaml.stringify(obj).trim();
+    const frontmatterLines = ['---', ...yamlString.split('\n'), '---'];
+    
+    if (body.length > 0 && body[0] !== '') {
+      finalLines = [...frontmatterLines, '', ...body];
+    } else {
+      finalLines = [...frontmatterLines, ...body];
+    }
+  } else {
+    finalLines = body;
+  }
+  
+  writeFileLines(libraryName, relativePath, finalLines as FileWholeLines);
+}
+
+export function readSectionContent(libraryName: LibraryName, relativePath: FileRelativePath, tocGlob: TocGlob): string[] {
+  const lines = readFileLines(libraryName, relativePath);
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, tocGlob);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  
+  const sectionStartLineNumber: LineNumber = tocLineNumber + 1; // Content starts after the heading
+  const sectionEndLineNumber: LineNumber = nextToc ? nextToc.lineNumber - 1 : lines.length;
+
+  if (sectionStartLineNumber > sectionEndLineNumber) {
+    return []; // Section has a heading but no content
+  }
+
+  return lines.slice(sectionStartLineNumber - 1, sectionEndLineNumber);
+}
 
 // (LibraryName, FileRelativePath) => FileWholeLines
 // 读取文件的所有行
@@ -409,6 +472,24 @@ export function deleteInToc(libraryName: LibraryName, relativePath: FileRelative
   const updatedLines = linesReplace(lines, beginLineNo, endLineNo, []);
 
   // 6. 写回文件 (use helper)
+  writeFileLines(libraryName, relativePath, updatedLines);
+}
+
+export function replaceSection(libraryName: LibraryName, relativePath: FileRelativePath, oldTocGlob: TocGlob, newHeading: string, newBodyContent: string[]): void {
+  const lines = readFileLines(libraryName, relativePath);
+  const tocList = getTocList(libraryName, relativePath);
+  const matchedToc = matchToc(libraryName, relativePath, oldTocGlob);
+  const tocLineNumber = matchedToc.lineNumber;
+
+  const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
+  const nextToc = tocList[tocIndex + 1];
+  
+  const sectionStartLineNumber: LineNumber = tocLineNumber;
+  const sectionEndLineNumber: LineNumber = nextToc ? nextToc.lineNumber - 1 : lines.length;
+
+  const newSectionLines = [newHeading, ...newBodyContent];
+  const updatedLines = linesReplace(lines, sectionStartLineNumber, sectionEndLineNumber, newSectionLines);
+  
   writeFileLines(libraryName, relativePath, updatedLines);
 }
 

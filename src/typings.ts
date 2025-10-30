@@ -139,6 +139,9 @@ export type TocList = TocItem[];
 // 整个文件的所有行
 export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
 
+// YAML Front Matter
+export type FrontMatter = Map<string, any>;
+
 // endregion
 // region 工具 typings
 

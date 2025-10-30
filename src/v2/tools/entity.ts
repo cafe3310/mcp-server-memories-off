@@ -1,7 +1,18 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {createFile, getTocList, moveFileToTrash, readFileLines, renameFile, writeFileLines} from '../shell';
-import type {McpHandlerDefinition, FileWholeLines} from "../../typings";
+import {
+  add,
+  createFile,
+  getTocList,
+  moveFileToTrash,
+  readFileLines,
+  readFrontMatter,
+  readSectionContent,
+  renameFile,
+  writeFileLines,
+  writeFrontMatter
+} from '../shell';
+import type {McpHandlerDefinition, FileWholeLines, FrontMatter} from "../../typings";
 import yaml from 'yaml';
 import shell from 'shelljs';
 import path from 'path';
@@ -55,28 +66,24 @@ export const addEntitiesTool = {
 
     for (const entity of entities) {
       const relativePath = `${entity.name}.md`;
-      const lines: string[] = [];
+      createFile(libraryName, relativePath, [] as FileWholeLines);
 
-      const frontMatter: Record<string, any> = {};
+      const frontMatter: FrontMatter = new Map();
       if (entity.type) {
-        frontMatter['entity type'] = entity.type;
+        frontMatter.set('entity type', entity.type);
       }
       if (entity.aliases && entity.aliases.length > 0) {
-        frontMatter['aliases'] = entity.aliases;
+        frontMatter.set('aliases', entity.aliases);
       }
 
-      if (Object.keys(frontMatter).length > 0) {
-        lines.push('---');
-        lines.push(...yaml.stringify(frontMatter).trim().split('\n'));
-        lines.push('---');
-        lines.push(''); // Add a blank line after frontmatter
+      if (frontMatter.size > 0) {
+        writeFrontMatter(libraryName, relativePath, frontMatter);
       }
 
       if (entity.content) {
-        lines.push(...entity.content.split('\n'));
+        add(libraryName, relativePath, entity.content.split('\n'));
       }
-
-      createFile(libraryName, relativePath, lines as FileWholeLines);
+      
       createdEntityNames.push(entity.name);
     }
 
@@ -237,5 +244,227 @@ export const renameEntityTool = {
   },
 };
 
+// Zod schema for the readEntitiesSections tool
+export const ReadEntitiesSectionsInputSchema = z.object({
+  libraryName: z.string().describe('要从中读取章节内容的知识库的名称'),
+  entityNames: z.array(z.string()).describe('要读取章节内容的实体名称列表'),
+  sectionGlobs: z.array(z.string()).describe('要读取的章节标题的 glob 模式列表 (例如, "## Introduction", "frontmatter")'),
+});
 
-export const entityTools: McpHandlerDefinition[] = [createEntityTool, addEntitiesTool, deleteEntitiesTool, readEntitiesTool, listEntitiesTool, getEntitiesTocTool, renameEntityTool];
+// Tool definition for readEntitiesSections
+export const readEntitiesSectionsTool = {
+  toolType: {
+    name: 'readEntitiesSections',
+    description: '精确读取一个或多个实体中，与 `sectionGlobs` 匹配的特定章节的内容',
+    inputSchema: zodToJsonSchema(ReadEntitiesSectionsInputSchema),
+  },
+  handler: (args: unknown) => {
+    const {libraryName, entityNames, sectionGlobs} = ReadEntitiesSectionsInputSchema.parse(args);
+    const results: { entity_name: string; section: string; content: string }[] = [];
+
+    for (const entityName of entityNames) {
+      const relativePath = `${entityName}.md`;
+      for (const sectionGlob of sectionGlobs) {
+        if (sectionGlob === 'frontmatter') {
+          const frontmatter = readFrontMatter(libraryName, relativePath);
+          if (frontmatter) {
+            const content = yaml.stringify(Object.fromEntries(frontmatter));
+            results.push({ entity_name: entityName, section: sectionGlob, content });
+          }
+        } else {
+          const sectionContentLines = readSectionContent(libraryName, relativePath, sectionGlob);
+          results.push({ entity_name: entityName, section: sectionGlob, content: sectionContentLines.join('\n') });
+        }
+      }
+    }
+    return yaml.stringify(results);
+  },
+};
+
+
+// Zod schema for the addEntityContent tool
+export const AddEntityContentInputSchema = z.object({
+  libraryName: z.string().describe('要在其中添加内容的知识库的名称'),
+  entityName: z.string().describe('要添加内容的实体名称'),
+  inSection: z.string().describe('内容将添加到的章节标题'),
+  newContent: z.string().describe('要追加的新内容'),
+});
+
+// Tool definition for addEntityContent
+export const addEntityContentTool = {
+  toolType: {
+    name: 'addEntityContent',
+    description: '在指定实体、指定章节的末尾追加新内容',
+    inputSchema: zodToJsonSchema(AddEntityContentInputSchema),
+  },
+  handler: (args: unknown) => {
+    const { libraryName, entityName, inSection, newContent } = AddEntityContentInputSchema.parse(args);
+    const relativePath = `${entityName}.md`;
+    addInToc(libraryName, relativePath, inSection, newContent.split('\n'));
+    return `---status: success, message: Content added to section '${inSection}' in entity '${entityName}'.---`;
+  },
+};
+
+// Zod schema for the deleteEntityContent tool
+export const DeleteEntityContentInputSchema = z.object({
+  libraryName: z.string().describe('要从中删除内容的知识库的名称'),
+  entityName: z.string().describe('要删除内容的实体名称'),
+  inSection: z.string().describe('内容将从其中删除的章节标题'),
+  contentToDelete: z.string().describe('要精确删除的内容块'),
+});
+
+// Tool definition for deleteEntityContent
+export const deleteEntityContentTool = {
+  toolType: {
+    name: 'deleteEntityContent',
+    description: '从指定实体、指定章节中，精确删除一段内容',
+    inputSchema: zodToJsonSchema(DeleteEntityContentInputSchema),
+  },
+  handler: (args: unknown) => {
+    const { libraryName, entityName, inSection, contentToDelete } = DeleteEntityContentInputSchema.parse(args);
+    const relativePath = `${entityName}.md`;
+    deleteInToc(libraryName, relativePath, inSection, contentToDelete.split('\n'));
+    return `---status: success, message: Content deleted from section '${inSection}' in entity '${entityName}'.---`;
+  },
+};
+
+// Zod schema for the replaceEntitySection tool
+export const ReplaceEntitySectionInputSchema = z.object({
+  libraryName: z.string().describe('要在其中替换章节的知识库的名称'),
+  entityName: z.string().describe('要替换章节的实体名称'),
+  oldHeading: z.string().describe('要被替换的旧章节的标题'),
+  newHeading: z.string().describe('新章节的标题'),
+  newBodyContent: z.string().describe('新章节的完整正文内容'),
+});
+
+// Tool definition for replaceEntitySection
+export const replaceEntitySectionTool = {
+  toolType: {
+    name: 'replaceEntitySection',
+    description: '重写一个完整的章节，可同时修改章节标题和其全部正文',
+    inputSchema: zodToJsonSchema(ReplaceEntitySectionInputSchema),
+  },
+  handler: (args: unknown) => {
+    const { libraryName, entityName, oldHeading, newHeading, newBodyContent } = ReplaceEntitySectionInputSchema.parse(args);
+    const relativePath = `${entityName}.md`;
+    replaceSection(libraryName, relativePath, oldHeading, newHeading, newBodyContent.split('\n'));
+    return `---status: success, message: Section '${oldHeading}' in entity '${entityName}' has been replaced.---`;
+  },
+};
+
+// Zod schema for the mergeEntities tool
+export const MergeEntitiesInputSchema = z.object({
+  libraryName: z.string().describe('要在其中合并实体的知识库的名称'),
+  sourceNames: z.array(z.string()).describe('要被合并的源实体的名称列表'),
+  targetName: z.string().describe('合并的目标实体的名称'),
+});
+
+// Tool definition for mergeEntities
+export const mergeEntitiesTool = {
+  toolType: {
+    name: 'mergeEntities',
+    description: '将多个源实体合并入一个目标实体，然后删除源实体',
+    inputSchema: zodToJsonSchema(MergeEntitiesInputSchema),
+  },
+  handler: (args: unknown) => {
+    const { libraryName, sourceNames, targetName } = MergeEntitiesInputSchema.parse(args);
+    const targetRelativePath = `${targetName}.md`;
+
+    const targetFrontmatter = readFrontMatter(libraryName, targetRelativePath) ?? new Map();
+    const targetContent = readFileLines(libraryName, targetRelativePath);
+
+    const mergedContent = [...targetContent];
+    
+    for (const sourceName of sourceNames) {
+      const sourceRelativePath = `${sourceName}.md`;
+      const sourceFrontmatter = readFrontMatter(libraryName, sourceRelativePath);
+      const sourceContent = readFileLines(libraryName, sourceRelativePath);
+
+      // Merge frontmatter
+      if (sourceFrontmatter) {
+        for (const [key, value] of sourceFrontmatter.entries()) {
+          if (targetFrontmatter.has(key) && Array.isArray(targetFrontmatter.get(key))) {
+            const targetArray = targetFrontmatter.get(key);
+            const sourceArray = Array.isArray(value) ? value : [value];
+            targetFrontmatter.set(key, [...new Set([...targetArray, ...sourceArray])]);
+          } else {
+            targetFrontmatter.set(key, value);
+          }
+        }
+      }
+      
+      // Merge content
+      mergedContent.push(`\n---\n\n## Content from ${sourceName}\n\n`);
+      mergedContent.push(...sourceContent);
+      
+      // Delete source entity
+      deleteFile(libraryName, sourceRelativePath);
+    }
+    
+    writeFrontMatter(libraryName, targetRelativePath, targetFrontmatter);
+    add(libraryName, targetRelativePath, mergedContent);
+
+    return `---status: success, message: Merged ${sourceNames.length} entities into '${targetName}'.---`;
+  },
+};
+
+// Zod schema for the garbageCollectRelations tool
+export const GarbageCollectRelationsInputSchema = z.object({
+  libraryName: z.string().describe('要在其中进行垃圾回收的知识库的名称'),
+  dryRun: z.boolean().optional().default(true).describe('是否为演习模式。true 只报告问题，false 则实际执行清理。'),
+});
+
+// Tool definition for garbageCollectRelations
+export const garbageCollectRelationsTool = {
+  toolType: {
+    name: 'garbageCollectRelations',
+    description: '查找并清理知识库中指向不存在的实体的“断裂链接”',
+    inputSchema: zodToJsonSchema(GarbageCollectRelationsInputSchema),
+  },
+  handler: (args: unknown) => {
+    const { libraryName, dryRun } = GarbageCollectRelationsInputSchema.parse(args);
+    const libPath = getLibraryPath(libraryName);
+    const allEntityFiles = shell.ls(path.join(libPath, '*.md'));
+    const allEntityNames = new Set(allEntityFiles.map(file => path.basename(file, '.md')));
+    
+    const danglingRelations: { in_entity: string; relation_to: string; type: string }[] = [];
+    const affectedEntities = new Map<string, FrontMatter>();
+
+    for (const entityFile of allEntityFiles) {
+      const entityName = path.basename(entityFile, '.md');
+      const relativePath = `${entityName}.md`;
+      const frontmatter = readFrontMatter(libraryName, relativePath);
+      
+      if (frontmatter && frontmatter.has('relations')) {
+        const relations = frontmatter.get('relations') as { 'relation to': string; 'relation type': string }[];
+        const validRelations = [];
+        let hasDangling = false;
+        
+        for (const relation of relations) {
+          if (allEntityNames.has(relation['relation to'])) {
+            validRelations.push(relation);
+          } else {
+            danglingRelations.push({ in_entity: entityName, relation_to: relation['relation to'], type: relation['relation type'] });
+            hasDangling = true;
+          }
+        }
+        
+        if (hasDangling && !dryRun) {
+          frontmatter.set('relations', validRelations);
+          affectedEntities.set(relativePath, frontmatter);
+        }
+      }
+    }
+
+    if (!dryRun) {
+      for (const [relativePath, frontmatter] of affectedEntities.entries()) {
+        writeFrontMatter(libraryName, relativePath as FileRelativePath, frontmatter);
+      }
+      return `---status: success, cleaned_relations_count: ${danglingRelations.length}, affected_entities: ${[...affectedEntities.keys()]}---`;
+    } else {
+      return yaml.stringify({ dangling_relations_found: danglingRelations });
+    }
+  },
+};
+
+export const entityTools: McpHandlerDefinition[] = [createEntityTool, addEntitiesTool, deleteEntitiesTool, readEntitiesTool, listEntitiesTool, getEntitiesTocTool, renameEntityTool, readEntitiesSectionsTool, addEntityContentTool, deleteEntityContentTool, replaceEntitySectionTool, mergeEntitiesTool, garbageCollectRelationsTool];
