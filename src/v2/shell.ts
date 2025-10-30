@@ -334,8 +334,6 @@ export function add(libraryName: LibraryName, relativePath: FileRelativePath, co
 //
 export function addInToc(libraryName: LibraryName, relativePath: FileRelativePath, toc: TocGlob, content: ContentExactLine[]): void {
 
-  console.log('addInToc', libraryName, relativePath, toc, content);
-
   // 1. 读取文件内容
   const lines = readFileLines(libraryName, relativePath);
 

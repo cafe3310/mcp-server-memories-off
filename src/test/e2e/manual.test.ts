@@ -37,35 +37,76 @@ describe('E2E Manual Tools Lifecycle', () => {
     expectFileTotalLines(metaFilePath, [
       '## first section',
       'Hello, world!',
-    ]); // Expecting 4 lines: toc, blank, content, blank
+    ]);
 
     // Step 3: Read meta.md to confirm the new section exists
     response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: 'test-library' } });
-    let fileContent = fs.readFileSync(metaFilePath, 'utf-8');
-    expect(fileContent).toContain(`## ${toc1.toLowerCase()}`);
-    expect(fileContent).toContain(content1);
     expect(response.result).toContain(content1);
 
     // Step 4: Edit the content of the section
-    const content2 = 'Content has been updated.';
+    const content2 = 'Hi.\nContent has been updated.';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'editManualSection',
-      arguments: { libraryName: 'test-library', oldContent: content1, newContent: content2 },
+      arguments: { libraryName: 'test-library', oldContent: content1, newContent: content2  },
     });
     expect(response.result).toContain('success');
+    expectFileTotalLines(metaFilePath, [
+      '## first section',
+      'Hi.',
+      'Content has been updated.',
+    ]);
 
-    // Step 5: Read meta.md to confirm the content is updated
+    // Step 5: Delete some content from the section, using editManualSection
+    const content3 = 'Hi.';
+    response = await callMcp(serverProcess, 'tools/call', {
+      name: 'editManualSection',
+      arguments: { libraryName: 'test-library', oldContent: content2, newContent: content3  },
+    });
+    expect(response.result).toContain('success');
+    expectFileTotalLines(metaFilePath, [
+      '## first section',
+      'Hi.',
+    ]);
+
+    // Add another section for further testing
+    const toc2 = 'Second Section';
+    const content4 = 'This is the second section.';
+    response = await callMcp(serverProcess, 'tools/call', {
+      name: 'addManualSection',
+      arguments: { libraryName: 'test-library', toc: toc2, newContent: content4 },
+    });
+    expect(response.result).toContain('success');
+    expectFileTotalLines(metaFilePath, [
+      '## first section',
+      'Hi.',
+      '## second section',
+      'This is the second section.',
+    ]);
+
+    // Add to the existing first section
+    const content5 = 'Additional content in the first section.';
+    response = await callMcp(serverProcess, 'tools/call', {
+      name: 'addManualSection',
+      arguments: { libraryName: 'test-library', toc: toc1, newContent: content5 },
+    });
+    expect(response.result).toEqual('---status: success, message: content added successfully in meta.md---');
+    expectFileTotalLines(metaFilePath, [
+      '## first section',
+      'Hi.',
+      'Additional content in the first section.',
+      '## second section',
+      'This is the second section.',
+    ]);
+
+    // Read final meta.md to confirm all changes
     response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: 'test-library' } });
-    fileContent = fs.readFileSync(metaFilePath, 'utf-8');
-    expect(fileContent).not.toContain(content1);
-    expect(fileContent).toContain(content2);
-    expect(response.result).toContain(content2);
+    expect(response.result).toBe(`---file-start: test-library/meta.md---
+## first section
+Hi.
+Additional content in the first section.
+## second section
+This is the second section.
+---file-end---`);
 
-    // Step 6 & 7: Deleting a section is not tested because a `deleteManualSection` tool is not implemented yet.
-    // When it is, the test steps would be:
-    // 1. Call the delete tool.
-    // 2. Assert the success response.
-    // 3. Call readManual again and assert the content is gone.
-
-  }, 20000); // 20s timeout for the whole sequence
+  }, 10000); // 10s timeout for the whole sequence
 });
