@@ -3,10 +3,12 @@ import {ChildProcess, execSync, spawn} from "node:child_process";
 import fs from "node:fs";
 import {expect} from "bun:test";
 
-const projectRoot = import.meta.dir.replace('/test/e2e', '');
+// current file: root/src/test/e2e/util.test.ts
+// project root: root/
+const projectRoot = path.join(__dirname, '..', '..', '..');
 export const distPath = path.join(projectRoot, 'dist', 'index.js');
-export const tempLibraryPath = path.join(projectRoot, 'test', 'tmp', 'test-library');
-export const tempLogPath = path.join(projectRoot, 'test', 'tmp');
+export const tempLogPath = path.join(projectRoot, 'tmp');
+export const tempLibraryPath = path.join(projectRoot, 'tmp', 'test-library');
 export const metaFilePath = path.join(tempLibraryPath, 'meta.md');
 
 // Helper to send requests and receive responses
@@ -41,8 +43,6 @@ export function makeRequest(serverProcess: ChildProcess, request: any, callback:
   });
 }
 
-import { jest } from 'bun:test';
-
 export function resetLibAndBootMcp() {
 
   if (fs.existsSync(tempLibraryPath)) {
@@ -72,8 +72,11 @@ export function resetLibAndBootMcp() {
   });
   expect(serverProcess.pid).toBeDefined();
   console.log(`Server started with PID: ${serverProcess.pid}`);
+  serverProcess.stdout?.on('data', (data) => {
+    console.log(`TESTING STDOUT:`, `${data}`);
+  });
   serverProcess.stderr?.on('data', (data) => {
-    console.error(`Server STDERR: ${data}`);
+    console.error(`TESTING STDERR:`, `${data}`);
   });
 
   return serverProcess;
@@ -89,7 +92,6 @@ export function killMcp(serverProcess: ChildProcess) {
   }
 }
 
-
 // Helper to generate MCP requests
 // 自动管理 id
 let id = 0;
@@ -100,5 +102,24 @@ export function generateMcpReq(method: 'tools/list' | 'tools/call' | string, arg
     id: id,
     method,
     params: args,
+  }
+}
+
+
+// 检查文件内容是否和预期的行内容完全一致
+export function expectFileTotalLines(filePath: string, expectedLines: string[], allowTrimming: boolean = false) {
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const fileLines = fileContent.split('\n').map(line => allowTrimming ? line.trim() : line);
+  const expectedTrimmedLines = expectedLines.map(line => allowTrimming ? line.trim() : line);
+  expect(fileLines).toEqual(expectedTrimmedLines);
+}
+
+// 检查文件内容是否包含预期的行内容（顺序不限）
+export function expectFileContainsLines(filePath: string, expectedLines: string[], allowTrimming: boolean = false) {
+  const fileContent = fs.readFileSync(filePath, 'utf-8');
+  const fileLines = fileContent.split('\n').map(line => allowTrimming ? line.trim() : line);
+  for (const expectedLine of expectedLines) {
+    const trimmedExpectedLine = allowTrimming ? expectedLine.trim() : expectedLine;
+    expect(fileLines).toContain(trimmedExpectedLine);
   }
 }

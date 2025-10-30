@@ -290,4 +290,4 @@ out
 
 # End of https://www.toptal.com/developers/gitignore/api/node,jetbrains
 # Temporary files for E2E tests
-/test/tmp
+/tmp

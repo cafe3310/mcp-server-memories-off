@@ -23,8 +23,7 @@
     "noPropertyAccessFromIndexSignature": true
   },
   "include": [
-    "src/**/*.ts",
-    "test/e2e-manual.test.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules"

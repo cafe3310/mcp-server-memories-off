@@ -1,5 +1,5 @@
 import {describe, it, expect, beforeEach, spyOn, type Mock, afterAll, jest} from 'bun:test';
-import '../../test/setup';
+import '../test/setup';
 
 import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from '../typings';
 
@@ -11,7 +11,7 @@ import * as shell from './shell';
 
 import {readFileLines, getTocList, normalize, linesMatchContent, linesReplace, matchToc, deleteContent, add, addInToc, deleteInToc, createFile, replace, insertAfter, insertInTocAfter, replaceInToc} from './shell';
 import fs from 'fs';
-import * as mockSetup from "../../test/setup";
+import * as mockSetup from "../test/setup";
 
 const MOCK_LIBRARY_NAME: LibraryName = mockSetup.MOCK_LIBRARY_NAME;
 const MOCK_FILE_RELATIVE_PATH: FileRelativePath = mockSetup.MOCK_FILE_RELATIVE_PATH;

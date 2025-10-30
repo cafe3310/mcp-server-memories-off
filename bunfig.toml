@@ -1,2 +1,4 @@
 [test]
 coverage = true
+root = "src"
+smol = true

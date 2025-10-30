@@ -1,8 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
-import path from 'path';
-import { killMcp, makeRequest, resetLibAndBootMcp, generateMcpReq, metaFilePath } from "./util.test";
+import {
+  killMcp,
+  makeRequest,
+  resetLibAndBootMcp,
+  generateMcpReq,
+  metaFilePath,
+  expectFileTotalLines
+} from "./util.test";
 
 // Promisify makeRequest for async/await syntax
 const callMcp = (serverProcess: ChildProcess, method: string, params: any) => {
@@ -32,7 +38,7 @@ describe('E2E Manual Tools Lifecycle', () => {
 
 ---file-end---`);
 
-    // Step 2: Add a new section
+    // Step 2: Add a new section, confirm success response and section added
     const toc1 = 'First Section';
     const content1 = 'Hello, world!';
     response = await callMcp(serverProcess, 'tools/call', {
@@ -40,6 +46,11 @@ describe('E2E Manual Tools Lifecycle', () => {
       arguments: { libraryName: 'test-library', toc: toc1, newContent: content1 },
     });
     expect(response.result).toContain('success');
+    expectFileTotalLines(metaFilePath, [
+      '## first section',
+      '',
+      'Hello, world!',
+    ]); // Expecting 4 lines: toc, blank, content, blank
 
     // Step 3: Read meta.md to confirm the new section exists
     response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: 'test-library' } });
