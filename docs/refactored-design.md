@@ -102,19 +102,16 @@ relations:
 
 #### `create_entity(library_name, entity_name)`
 - **功能**: 在指定的知识库中创建一个新的实体（即一个 .md 文件）。
-- **返回**: 一个确认对象。
-  ```yaml
-  status: success
-  message: "entity new-entity created successfully in library test-library"
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: entity new-entity created successfully in library test-library---
   ```
 
 #### `list_entities(library_name, entity_glob)`
 - **功能**: 基于 `glob` 模式列出实体。
-- **返回**: 实体名称列表。
-  ```yaml
-  entities:
-    - project-apollo
-    - project-gemini
+- **返回**: 纯文本格式的实体列表。
+  ```
+  ---status: success, message: 2 entities found, entities: project-apollo,project-gemini---
   ```
 
 #### `add_entities(library_name, entities)`
@@ -153,39 +150,63 @@ relations:
 
 #### `rename_entity(library_name, old_name, new_name)`
 - **功能**: 对实体进行“深度重命名”，并修复所有入链。
-- **返回**: 一个确认对象，说明附带影响。
-  ```yaml
-  status: success
-  message: "Renamed 'old-name' to 'new-name'. 3 incoming relations were updated."
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: Renamed 'old-name' to 'new-name'. 3 incoming relations were updated.---
   ```
 
 #### `merge_entities(library_name, source_names, target_name)`
 - **功能**: 将多个源实体合并入一个目标实体。
-- **返回**: 一个总结报告。
-  ```yaml
-  status: success
-  target_entity: target-entity
-  merged_sources:
-    - source-1
-    - source-2
-  message: "Merged 2 entities into 'target-entity'. Content and relations have been consolidated."
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: Merged 2 entities into 'target-entity'.---
   ```
 
 #### `garbage_collect_relations(library_name, dry_run?)`
 - **功能**: 查找并清理“断裂链接”。
-- **返回 (dry_run: true)**: 报告将要清理的悬空关系。
+- **返回 (dry_run: true)**: 报告将要清理的悬空关系 (YAML 格式)。
   ```yaml
   dangling_relations_found:
     - in_entity: entity-a
       relation_to: non-existent-entity
       type: knows
   ```
-- **返回 (dry_run: false)**: 报告清理结果。
+- **返回 (dry_run: false)**: 纯文本格式的清理结果报告。
+  ```
+  ---status: success, cleaned_relations_count: 1, affected_entities: entity-a---
+  ```
+
+#### `read_entities_sections(library_name, entity_names, section_globs)`
+- **功能**: 精确读取一个或多个实体中，与 `section_globs` 匹配的特定章节的内容。
+- **返回**: YAML 格式的章节内容列表。
   ```yaml
-  status: success
-  cleaned_relations_count: 1
-  affected_entities:
-    - entity-a
+  - entity_name: entity-a
+    section: "## Section 1"
+    content: "Content of section 1..."
+  - entity_name: entity-a
+    section: "frontmatter"
+    content: "entity type: person\naliases:\n  - a"
+  ```
+
+#### `add_entity_content(library_name, entity_name, in_section, new_content)`
+- **功能**: 在指定实体、指定章节 (`in_section`) 的末尾追加新内容。
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: Content added to section '## Introduction' in entity 'my-entity'.---
+  ```
+
+#### `delete_entity_content(library_name, entity_name, in_section, content_to_delete)`
+- **功能**: 从指定实体、指定章节中，精确删除一段内容。
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: Content deleted from section '## Conclusion' in entity 'my-entity'.---
+  ```
+
+#### `replace_entity_section(library_name, entity_name, old_heading, new_heading, new_body_content)`
+- **功能**: 重写一个完整的章节，可同时修改章节标题和其全部正文。
+- **返回**: 纯文本格式的成功信息。
+  ```
+  ---status: success, message: Section '## Old Title' in entity 'my-entity' has been replaced.---
   ```
 
 ### 4.4. `search` 系列 (检索)
