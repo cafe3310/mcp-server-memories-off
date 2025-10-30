@@ -1,8 +1,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { getEnvVar, logfile, logfileE, setLogOutputFile } from "../utils.ts";
+import { getEnvVar, logfile, setLogOutputFile } from "../utils.ts";
 import { manualTools } from "./tools/manual.ts";
-import { createFileTool } from "./tools/file.ts";
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type {McpHandlerDefinition} from "../typings.ts";
 
@@ -41,6 +40,7 @@ export async function runV2() {
   logfile('v2', `Registered tools: ${toolTypes.map(t => t.name).join(', ')}`);
 
   // Handler for CallTool requests
+  // @ts-expect-error too complex typing
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     logfile('v2', `Received request: ${JSON.stringify(request)}`);
     const { name, arguments: args } = request.params;

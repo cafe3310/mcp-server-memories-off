@@ -134,6 +134,9 @@ export function readFileLines(libraryName: LibraryName, relativePath: FileRelati
   const fullPath = pathForFile(libraryName, relativePath);
   checks(shell.test('-f', fullPath), `无法找到文件: ${fullPath}`);
   const fileContent = fs.readFileSync(fullPath, 'utf-8');
+  if (fileContent === '') {
+    return [] as FileWholeLines;
+  }
   const lines = fileContent.split('\n');
   return lines as FileWholeLines;
 }

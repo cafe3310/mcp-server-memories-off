@@ -3,22 +3,10 @@ import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import {
   killMcp,
-  makeRequest,
   resetLibAndBootMcp,
-  generateMcpReq,
   metaFilePath,
-  expectFileTotalLines
+  expectFileTotalLines, callMcp
 } from "./util.test";
-
-// Promisify makeRequest for async/await syntax
-const callMcp = (serverProcess: ChildProcess, method: string, params: any) => {
-  return new Promise((resolve) => {
-    const request = generateMcpReq(method, params);
-    makeRequest(serverProcess, request, (response) => {
-      resolve(response);
-    });
-  });
-};
 
 describe('E2E Manual Tools Lifecycle', () => {
   let serverProcess: ChildProcess;
@@ -33,7 +21,7 @@ describe('E2E Manual Tools Lifecycle', () => {
 
   test('should perform a full lifecycle of operations on meta.md', async () => {
     // Step 1: Read meta.md, confirm it's empty initially
-    let response: any = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: 'test-library' } });
+    let response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: 'test-library' } });
     expect(response.result).toBe(`---file-start: test-library/meta.md---
 
 ---file-end---`);
@@ -48,7 +36,6 @@ describe('E2E Manual Tools Lifecycle', () => {
     expect(response.result).toContain('success');
     expectFileTotalLines(metaFilePath, [
       '## first section',
-      '',
       'Hello, world!',
     ]); // Expecting 4 lines: toc, blank, content, blank
 

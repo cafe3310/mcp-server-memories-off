@@ -75,7 +75,7 @@ export const addManualSectionTool = {
     if (tocMatch.length > 0) {
       addInToc(libraryName, 'meta.md', toc, newContent.split('\n'));
     } else {
-      add(libraryName, 'meta.md', ['', toTocLine(toc, 2), '', ...newContent.split('\n')]);
+      add(libraryName, 'meta.md', [toTocLine(toc, 2), ...newContent.split('\n')]);
     }
     return `---status: success, message: content added successfully in meta.md---`;
   },

@@ -1,17 +1,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { ChildProcess } from 'node:child_process';
-import { killMcp, makeRequest, resetLibAndBootMcp, generateMcpReq } from "./util.test";
-
-// Promisify makeRequest for async/await syntax
-const callMcp = (serverProcess: ChildProcess, method: string, params: any) => {
-  return new Promise((resolve) => {
-    const request = generateMcpReq(method, params);
-    makeRequest(serverProcess, request, (response) => {
-      resolve(response);
-    });
-  });
-};
+import {killMcp, resetLibAndBootMcp, callMcp} from "./util.test";
 
 describe('E2E Boot and Core Tools', () => {
   let serverProcess: ChildProcess;
@@ -26,7 +16,7 @@ describe('E2E Boot and Core Tools', () => {
 
   test('should respond to ping and list tools', async () => {
     // Test ping
-    const pingResponse: any = await callMcp(serverProcess, 'ping', {});
+    const pingResponse = await callMcp(serverProcess, 'ping', {});
     expect(pingResponse.result).toEqual({}); // User confirmed this is the expected (but quirky) response
 
     // Test list tools
@@ -39,4 +29,3 @@ describe('E2E Boot and Core Tools', () => {
 
   }, 15000);
 });
-

@@ -25,7 +25,7 @@ export function makeRequest(serverProcess: ChildProcess, request: any, callback:
       buffer = lines.pop()!;
       const completeLine = lines[0];
       try {
-        response = JSON.parse(completeLine || '');
+        response = JSON.parse(completeLine ?? '');
         serverProcess.stdout?.removeListener('data', onData);
       } catch (e) {
         console.error('Failed to parse JSON from server:', completeLine, e);
@@ -66,15 +66,12 @@ export function resetLibAndBootMcp() {
     MEM_LOG_DIR: `${tempLogPath}`,
   };
 
-  let serverProcess = spawn('bun', [distPath], {
+  const serverProcess = spawn('bun', [distPath], {
     env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   expect(serverProcess.pid).toBeDefined();
   console.log(`Server started with PID: ${serverProcess.pid}`);
-  serverProcess.stdout?.on('data', (data) => {
-    console.log(`TESTING STDOUT:`, `${data}`);
-  });
   serverProcess.stderr?.on('data', (data) => {
     console.error(`TESTING STDERR:`, `${data}`);
   });
@@ -83,11 +80,12 @@ export function resetLibAndBootMcp() {
 }
 
 export function killMcp(serverProcess: ChildProcess) {
-  if (serverProcess && serverProcess.pid) {
+  if (serverProcess?.pid) {
     console.log(`Killing server process ${serverProcess.pid}`);
     try {
       process.kill(serverProcess.pid);
-    } catch (e) { /* Ignore */
+    } catch (_) {
+      void 0;
     }
   }
 }
@@ -95,7 +93,7 @@ export function killMcp(serverProcess: ChildProcess) {
 // Helper to generate MCP requests
 // 自动管理 id
 let id = 0;
-export function generateMcpReq(method: 'tools/list' | 'tools/call' | string, args: any = {}) {
+export function generateMcpReq(method: 'tools/list' | 'tools/call' | string, args: unknown = {}) {
   id = id + 1;
   return {
     jsonrpc: '2.0',
@@ -107,7 +105,7 @@ export function generateMcpReq(method: 'tools/list' | 'tools/call' | string, arg
 
 
 // 检查文件内容是否和预期的行内容完全一致
-export function expectFileTotalLines(filePath: string, expectedLines: string[], allowTrimming: boolean = false) {
+export function expectFileTotalLines(filePath: string, expectedLines: string[], allowTrimming = false) {
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const fileLines = fileContent.split('\n').map(line => allowTrimming ? line.trim() : line);
   const expectedTrimmedLines = expectedLines.map(line => allowTrimming ? line.trim() : line);
@@ -115,7 +113,7 @@ export function expectFileTotalLines(filePath: string, expectedLines: string[], 
 }
 
 // 检查文件内容是否包含预期的行内容（顺序不限）
-export function expectFileContainsLines(filePath: string, expectedLines: string[], allowTrimming: boolean = false) {
+export function expectFileContainsLines(filePath: string, expectedLines: string[], allowTrimming = false) {
   const fileContent = fs.readFileSync(filePath, 'utf-8');
   const fileLines = fileContent.split('\n').map(line => allowTrimming ? line.trim() : line);
   for (const expectedLine of expectedLines) {
@@ -123,3 +121,13 @@ export function expectFileContainsLines(filePath: string, expectedLines: string[
     expect(fileLines).toContain(trimmedExpectedLine);
   }
 }
+
+// Promisify makeRequest for async/await syntax
+export const callMcp = (serverProcess: ChildProcess, method: string, params: unknown): Promise<{result: any}> => {
+  return new Promise((resolve) => {
+    const request = generateMcpReq(method, params);
+    makeRequest(serverProcess, request, (response: unknown) => {
+      resolve(response as {result: string});
+    });
+  });
+};

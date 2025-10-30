@@ -3,7 +3,7 @@ import path from "path";
 
 // Parses the library paths from environment variables.
 
-const librariesStr = process.env.MEM_LIBRARIES;
+const librariesStr = process.env['MEM_LIBRARIES'];
 checks(!!librariesStr, 'MEM_LIBRARIES environment variable is not set. Please provide a comma-separated list of name:path pairs.');
 
 const libraries = new Map<string, string>();
