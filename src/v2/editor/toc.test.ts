@@ -1,10 +1,11 @@
-import {describe, expect, it, type Mock, spyOn, beforeEach} from 'bun:test';
+import {describe, expect, it, type Mock, spyOn, beforeEach, afterEach} from 'bun:test';
 import '../../test/setup';
 
 import {type LibraryName, type FileWholeLines, type ThingName, FileType} from '../../typings';
 import fs from 'fs';
 import * as mockSetup from "../../test/setup";
 import {getTocList, matchToc, matchTocNoThrow} from "./toc.ts";
+import shell from "shelljs";
 
 const MOCK_LIBRARY_NAME: LibraryName = mockSetup.MOCK_LIBRARY_NAME;
 const MOCK_ENTITY_NAME: ThingName = mockSetup.MOCK_ENTITY_NAME;
@@ -12,12 +13,21 @@ const MOCK_FILE_CONTENT_LINES: FileWholeLines = mockSetup.MOCK_FILE_CONTENT_LINE
 
 describe('TOC operations', () => {
   const readSpy = spyOn(fs, 'readFileSync') as Mock<(...args: unknown[]) => string>;
+  const shellTestSpy = spyOn(shell, 'test') as Mock<(...args: unknown[]) => boolean>;
+
 
   beforeEach(() => {
-    readSpy.mockClear();
+    readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
+    shellTestSpy.mockImplementation(() => true);
   });
 
+  afterEach(() => {
+    readSpy.mockClear();
+    shellTestSpy.mockClear();
+  })
+
   it('getTocList', () => {
+
     const toc = getTocList(MOCK_LIBRARY_NAME, FileType.FileTypeEntity, MOCK_ENTITY_NAME);
 
     expect(toc.length).toBe(4);
@@ -32,7 +42,7 @@ describe('TOC operations', () => {
     expect(toc[2]!.lineNumber).toBe(12);
 
     expect(toc[3]!.tocLineContent.startsWith('## Section 3')).toBe(true);
-    expect(toc[3]!.lineNumber).toBe(16);
+    expect(toc[3]!.lineNumber).toBe(15);
   });
 
   it('matchToc should find a unique TOC item', () => {

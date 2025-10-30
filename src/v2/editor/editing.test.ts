@@ -1,4 +1,4 @@
-import {describe, expect, it, type Mock, spyOn, beforeEach} from 'bun:test';
+import {describe, expect, it, type Mock, spyOn, beforeEach, afterEach} from 'bun:test';
 import '../../test/setup';
 
 import {
@@ -20,19 +20,28 @@ import {
   replace,
   replaceInToc
 } from "./editing.ts";
+import shell from "shelljs";
 
 const MOCK_LIBRARY_NAME: LibraryName = mockSetup.MOCK_LIBRARY_NAME;
 const MOCK_ENTITY_NAME: ThingName = mockSetup.MOCK_ENTITY_NAME;
 const MOCK_FILE_CONTENT_LINES: FileWholeLines = mockSetup.MOCK_FILE_CONTENT_LINES_1;
 
 describe('file content modifications', () => {
+  const shellTestSpy = spyOn(shell, 'test') as Mock<(...args: unknown[]) => boolean>;
   const readSpy = spyOn(fs, 'readFileSync') as Mock<(...args: unknown[]) => string>;
   const writeSpy = spyOn(fs, 'writeFileSync') as Mock<(...args: unknown[]) => void>;
 
   beforeEach(() => {
+    shellTestSpy.mockImplementation(() => true);
+    readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
+    writeSpy.mockImplementation(() => void 0);
+  });
+
+  afterEach(() => {
+    shellTestSpy.mockClear();
     readSpy.mockClear();
     writeSpy.mockClear();
-  });
+  })
 
   it('deleteContent should remove the specified lines from the file', () => {
     const contentToDelete = ['Line to be deleted.'];

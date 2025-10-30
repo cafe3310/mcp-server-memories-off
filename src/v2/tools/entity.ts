@@ -1,7 +1,6 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import {
-  type FileRelativePath,
   FileType,
   type FileWholeLines,
   type FrontMatter,
@@ -355,15 +354,12 @@ export const mergeEntitiesTool = {
   },
   handler: (args: unknown) => {
     const { libraryName, sourceNames, targetName } = MergeEntitiesInputSchema.parse(args);
-    const targetRelativePath = `${targetName}.md`;
-
     const targetFrontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, targetName) ?? new Map() as FrontMatter;
     const targetContent = readFileLines(libraryName, FileType.FileTypeEntity, targetName);
 
     const mergedContent = [...targetContent];
 
     for (const sourceName of sourceNames) {
-      const sourceRelativePath = `${sourceName}.md`;
       const sourceFrontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, sourceName);
       const sourceContent = readFileLines(libraryName, FileType.FileTypeEntity, sourceName);
 
