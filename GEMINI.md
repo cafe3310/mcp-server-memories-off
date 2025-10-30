@@ -94,7 +94,15 @@
     - `src/typings.ts`: 定义核心数据类型（如 `Entity`, `Relation`）。
     - `src/utils.ts`: 通用辅助函数。
     - `$HOME/mcp-server-memories-off.yaml`: 默认的知识图谱存储文件。
-
+    - **知识库目录结构**:
+      ```
+      library 目录
+      ├── entities    # 存放所有的内容实体
+      ├── meta.md     # 存放元数据文件
+      ├── backups     # 存放备份文件
+      ├── trash       # 作为删除后文件的回收站
+      └── journeys    # 作为编辑日志（当前尚未实现）
+      ```
 ---
 
 ### 第四部分：项目详细设计
@@ -104,10 +112,10 @@
     - 这些定义是“活文档”，直接驱动着工具的输入验证和 MCP 的工具列表功能，因此是理解各功能细节的最佳参考。
 
 - **知识图谱设计**:
-    - **实体 (Entity)**: 包含 `name`, `entityType`, `observations`。是知识的基本单元。
-    - **关系 (Relation)**: 包含 `from`, `to`, `relationType`。用于连接两个实体。
-    - **使用说明 (Manual)**: 包含 `name`, `description`, `targets`。用于存储图谱的元信息或使用指南。
-    - 存储格式为 YAML 数组，每个元素是一个实体、关系或使用说明。
+    - **实体 (Entity)**: 包含 `name`, `entityType`, `observations`。是知识的基本单元。实体文件将存储在 `library/entities/` 目录下。
+    - **关系 (Relation)**: 包含 `from`, `to`, `relationType`。用于连接两个实体。关系将作为实体文件中的元数据或通过特定文件进行管理。
+    - **使用说明 (Manual)**: 包含 `name`, `description`, `targets`。用于存储图谱的元信息或使用指南。`meta.md` 文件将用于存储这些信息。
+    - 存储格式将基于文件目录结构，而非单一的 YAML 数组。
 
 ---
 
