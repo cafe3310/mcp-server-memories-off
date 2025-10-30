@@ -65,13 +65,19 @@ export type MatchingKeys<T, V> = {
 // endregion
 // region 具体 typings
 
+// 文件类型
+export const enum FileType {
+  FileTypeEntity,
+  FileTypeJourney,
+  FileTypeMeta,
+}
+
+// 事物名称 - 如实体，记录名称。不带文件后缀名
+export type ThingName = WeakOpaque<string, 'ThingName'>;
+
 // 知识库名称
 // 如 "MyProjectDocs"
 export type LibraryName = WeakOpaque<string, 'LibraryName'>;
-
-// 知识库绝对路径
-// 如 "/home/user/docs/MyProjectDocs"
-export type LibraryPath = WeakOpaque<string, 'LibraryPath'>;
 
 // 文件相对路径，相对于知识库根目录。
 // 如 "guides/installation.md"
@@ -80,6 +86,10 @@ export type FileRelativePath = WeakOpaque<string, 'FileRelativePath'>;
 // 文件绝对路径
 // 如 "/home/user/docs/MyProjectDocs/guides/installation.md"
 export type FileAbsolutePath = WeakOpaque<string, 'FileAbsolutePath'>;
+
+// 文件夹绝对路径
+// 如 "/home/user/docs/MyProjectDocs/entities"
+export type FolderAbsolutePath = WeakOpaque<string, 'FolderAbsolutePath'>;
 
 // 模糊匹配的章节标题。
 // 如 "installation guide"
@@ -140,7 +150,7 @@ export type TocList = TocItem[];
 export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
 
 // YAML Front Matter
-export type FrontMatter = Map<string, string>;
+export type FrontMatter = Map<string, string | string[] | object[]>;
 
 // endregion
 // region 工具 typings

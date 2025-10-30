@@ -1,13 +1,10 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
-import {
-  add,
-  addInToc,
-  matchTocNoThrow,
-  readFileLines, replace,
-  toTocLine,
-} from "../shell";
-import type {McpHandlerDefinition} from "../../typings.ts";
+import {FileType, type McpHandlerDefinition} from "../../typings.ts";
+import {toTocLine} from "../editor/text.ts";
+import {readFileLines} from "../editor/file-ops.ts";
+import {matchTocNoThrow} from "../editor/toc.ts";
+import {add, addInToc, replace} from "../editor/editing.ts";
 
 // Zod schema for the readManual tool
 export const ReadManualInputSchema = z.object({
@@ -23,7 +20,7 @@ export const readManualTool = {
   },
   handler: (args: unknown) => {
     const {libraryName} = ReadManualInputSchema.parse(args);
-    const lines = readFileLines(libraryName, 'meta.md', 'root');
+    const lines = readFileLines(libraryName, FileType.FileTypeMeta, '');
     const content = lines.join('\n');
     return `---file-start: ${libraryName}/meta.md---
 ${content}
@@ -47,10 +44,10 @@ export const editManualTool = {
   },
   handler: (args: unknown) => {
     const {libraryName, oldContent, newContent} = EditManualInputSchema.parse(args);
-    replace(libraryName, 'meta.md', {
+    replace(libraryName, FileType.FileTypeMeta, '', {
       'type': 'Lines',
       contentLines: oldContent.split('\n'),
-    }, newContent.split('\n'), 'root');
+    }, newContent.split('\n'));
     return `---status: success, message: content updated successfully in meta.md---`;
   },
 };
@@ -71,11 +68,11 @@ export const addManualSectionTool = {
   handler: (args: unknown) => {
     const {libraryName, toc, newContent} = AddManualSectionInputSchema.parse(args);
     // 先看看章节存不存在
-    const tocMatch = matchTocNoThrow(libraryName, 'meta.md', toc, 'root');
+    const tocMatch = matchTocNoThrow(libraryName, FileType.FileTypeMeta, '', toc);
     if (tocMatch.length > 0) {
-      addInToc(libraryName, 'meta.md', toc, newContent.split('\n'), 'root');
+      addInToc(libraryName, FileType.FileTypeMeta, '', toc, newContent.split('\n'));
     } else {
-      add(libraryName, 'meta.md', [toTocLine(toc, 2), ...newContent.split('\n')], 'root');
+      add(libraryName, FileType.FileTypeMeta, '', [toTocLine(toc, 2), ...newContent.split('\n')]);
     }
     return `---status: success, message: content added successfully in meta.md---`;
   },

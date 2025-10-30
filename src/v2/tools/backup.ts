@@ -1,10 +1,8 @@
 import {z} from 'zod';
 import {zodToJsonSchema} from 'zod-to-json-schema';
 import type {McpHandlerDefinition} from "../../typings";
-import {getLibraryPath, getBackupsPath} from '../runtime';
+import {getLibraryDirPath, generateBackupPath} from '../runtime';
 import shell from 'shelljs';
-import path from 'path';
-import {format} from 'date-fns';
 import yaml from 'yaml';
 
 // Zod schema for the backupLibrary tool
@@ -21,20 +19,9 @@ export const backupLibraryTool: McpHandlerDefinition = {
   },
   handler: (args: unknown) => {
     const {libraryName} = BackupLibraryInputSchema.parse(args);
-    const libraryPath = getLibraryPath(libraryName);
-    const backupsDir = getBackupsPath(libraryName);
+    const libraryPath = getLibraryDirPath(libraryName);
+    const backupFilePath = generateBackupPath(libraryName);
 
-    // 1. Create backups directory if it doesn't exist
-    if (!shell.test('-d', backupsDir)) {
-      shell.mkdir('-p', backupsDir);
-    }
-
-    // 2. Generate timestamp and filename
-    const timestamp = format(new Date(), 'yyyyMMddHHmmss');
-    const backupFilename = `${libraryName}-${timestamp}.zip`;
-    const backupFilePath = path.join(backupsDir, backupFilename);
-
-    // 3. Create the zip archive
     const originalDir = shell.pwd().toString();
     shell.cd(libraryPath);
     const zipResult = shell.exec(`zip -r "${backupFilePath}" . -x "backups/*"`, {silent: true});
@@ -44,21 +31,14 @@ export const backupLibraryTool: McpHandlerDefinition = {
       throw new Error(`Failed to create zip archive: ${zipResult.stderr}`);
     }
 
-    // 4. Get file info
     const stats = shell.exec(`stat -f "%z" "${backupFilePath}"`, {silent: true}).stdout.trim();
     const sizeInBytes = parseInt(stats, 10);
     const sizeFormatted = formatBytes(sizeInBytes);
 
-    const fileCountOutput = shell.exec(`unzip -l "${backupFilePath}" | tail -n 1`, {silent: true}).stdout.trim();
-    const fileCountMatch = /(\d+)\s+files/.exec(fileCountOutput);
-    const fileCount = fileCountMatch ? parseInt(fileCountMatch[1], 10) : 0;
-
-    // 5. Return the result
     return yaml.stringify({
       status: 'success',
-      backupFile: backupFilename,
+      backupFile: backupFilePath,
       size: sizeFormatted,
-      fileCount: fileCount,
       message: 'Backup created successfully.',
     });
   },

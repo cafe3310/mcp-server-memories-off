@@ -141,9 +141,9 @@ describe('E2E Entity Tools', () => {
     });
 
     // 3. Verify the combined content
-    expect(response.result).toContain('--- test-library/entities/to-be-read-1.md ---');
+    expect(response.result).toContain('--- to-be-read-1 ---');
     expect(response.result).toContain('Content of read 1');
-    expect(response.result).toContain('--- test-library/entities/to-be-read-2.md ---');
+    expect(response.result).toContain('--- to-be-read-2 ---');
     expect(response.result).toContain('Content of read 2');
   }, 10000);
 

@@ -1,6 +1,7 @@
-import { checks, logfile } from '../utils.ts';
+import {checks, logfile} from '../utils.ts';
 import path from "path";
 import shell from 'shelljs';
+import type {FileAbsolutePath, FolderAbsolutePath} from "../typings.ts";
 
 // Define subdirectory names
 export const ENTITIES_DIR = 'entities';
@@ -41,57 +42,52 @@ function ensureLibraryStructure(libraryRootPath: string) {
   );
 }
 
-/**
- * Gets the absolute path for a given library name.
- * @param libraryName The name of the library.
- * @returns The absolute file path to the library directory.
- */
-export function getLibraryPath(libraryName: string): string {
+export function getLibraryDirPath(libraryName: string): FileAbsolutePath {
   const libPath = libraries.get(libraryName);
   checks(!!libPath, `Library '${libraryName}' not found or not loaded.`);
   return libPath;
 }
 
-/**
- * Gets the absolute path for the 'entities' directory of a given library.
- * @param libraryName The name of the library.
- * @returns The absolute file path to the entities directory.
- */
-export function getEntitiesPath(libraryName: string): string {
-  return path.join(getLibraryPath(libraryName), ENTITIES_DIR);
+export function getEntityDirPath(libraryName: string): FolderAbsolutePath {
+  return path.join(getLibraryDirPath(libraryName), ENTITIES_DIR);
 }
 
-/**
- * Gets the absolute path for the 'trash' directory of a given library.
- * @param libraryName The name of the library.
- * @returns The absolute file path to the trash directory.
- */
-export function getTrashPath(libraryName: string): string {
-  return path.join(getLibraryPath(libraryName), TRASH_DIR);
+export function getJourneyFilePath(libraryName: string, journeyId: string): FileAbsolutePath {
+  const fileName = `${journeyId}.md`;
+  return path.join(getLibraryDirPath(libraryName), JOURNEYS_DIR, fileName);
 }
 
-/**
- * Gets the absolute path for the 'backups' directory of a given library.
- * @param libraryName The name of the library.
- * @returns The absolute file path to the backups directory.
- */
-export function getBackupsPath(libraryName: string): string {
-  return path.join(getLibraryPath(libraryName), BACKUPS_DIR);
+export function getEntityFilePath(libraryName: string, entityName: string): FileAbsolutePath {
+  const fileName = `${entityName}.md`;
+  return path.join(getLibraryDirPath(libraryName), ENTITIES_DIR, fileName);
 }
 
-/**
- * Gets the absolute path for the 'meta.md' file of a given library.
- * @param libraryName The name of the library.
- * @returns The absolute file path to the meta.md file.
- */
-export function getMetaPath(libraryName: string): string {
-  return path.join(getLibraryPath(libraryName), META_FILE);
+export function generateEntityTrashPath(libraryName: string, entityName: string): FileAbsolutePath {
+  const fileName = `${entityName}_${(formatTimestamp())}.md`;
+  return path.join(getLibraryDirPath(libraryName), TRASH_DIR, fileName);
 }
 
+export function generateBackupPath(libraryName: string): FileAbsolutePath {
+  const fileName = `${libraryName}-backup-${(formatTimestamp())}.zip`;
+  return path.join(getLibraryDirPath(libraryName), BACKUPS_DIR, fileName);
+}
 
-/**
- * Returns a map of all loaded libraries.
- */
+export function getMetaFilePath(libraryName: string): FileAbsolutePath {
+  return path.join(getLibraryDirPath(libraryName), META_FILE);
+}
+
 export function getLibraries(): Map<string, string> {
   return libraries;
+}
+
+function formatTimestamp(): string {
+  // YYYY-MM-DD-HH-MM-SS
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
 }
