@@ -1,4 +1,4 @@
-import shell from 'shelljs';
+import shell from "shelljs";
 import path from 'path';
 import {getLibraryPath} from './runtime.ts';
 import {checks} from '../utils.ts';
@@ -159,7 +159,7 @@ export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRel
     const obj = Object.fromEntries(data);
     const yamlString = yaml.stringify(obj).trim();
     const frontmatterLines = ['---', ...yamlString.split('\n'), '---'];
-    
+
     if (body.length > 0 && body[0] !== '') {
       finalLines = [...frontmatterLines, '', ...body];
     } else {
@@ -168,7 +168,7 @@ export function writeFrontMatter(libraryName: LibraryName, relativePath: FileRel
   } else {
     finalLines = body;
   }
-  
+
   writeFileLines(libraryName, relativePath, finalLines as FileWholeLines);
 }
 
@@ -180,7 +180,7 @@ export function readSectionContent(libraryName: LibraryName, relativePath: FileR
 
   const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
   const nextToc = tocList[tocIndex + 1];
-  
+
   const sectionStartLineNumber: LineNumber = tocLineNumber + 1; // Content starts after the heading
   const sectionEndLineNumber: LineNumber = nextToc ? nextToc.lineNumber - 1 : lines.length;
 
@@ -483,13 +483,13 @@ export function replaceSection(libraryName: LibraryName, relativePath: FileRelat
 
   const tocIndex = tocList.findIndex(item => item.lineNumber === tocLineNumber);
   const nextToc = tocList[tocIndex + 1];
-  
+
   const sectionStartLineNumber: LineNumber = tocLineNumber;
   const sectionEndLineNumber: LineNumber = nextToc ? nextToc.lineNumber - 1 : lines.length;
 
   const newSectionLines = [newHeading, ...newBodyContent];
   const updatedLines = linesReplace(lines, sectionStartLineNumber, sectionEndLineNumber, newSectionLines);
-  
+
   writeFileLines(libraryName, relativePath, updatedLines);
 }
 

@@ -1,22 +1,38 @@
-import {describe, it, expect, beforeEach, spyOn, type Mock, afterAll, jest} from 'bun:test';
+import {describe, it, expect, beforeEach, beforeAll, spyOn, type Mock, afterAll, jest} from 'bun:test';
 import '../test/setup';
 
 import type {FileWholeLines, LibraryName, FileRelativePath, ContentLocator} from '../typings';
 
 // Mock dependencies using the correct `bun:test` API
 
+import shell from 'shelljs';
+import * as shellCls from './shell';
 
-import * as shell from './shell';
 
-
-import {readFileLines, getTocList, normalize, linesMatchContent, linesReplace, matchToc, deleteContent, add, addInToc, deleteInToc, createFile, replace, insertAfter, insertInTocAfter, replaceInToc} from './shell';
+import {
+  readFileLines,
+  getTocList,
+  normalize,
+  linesMatchContent,
+  linesReplace,
+  matchToc,
+  deleteContent,
+  add,
+  addInToc,
+  deleteInToc,
+  createFile,
+  replace,
+  insertAfter,
+  insertInTocAfter,
+  replaceInToc
+} from './shell';
 import fs from 'fs';
 import * as mockSetup from "../test/setup";
+import {afterEach} from "node:test";
 
 const MOCK_LIBRARY_NAME: LibraryName = mockSetup.MOCK_LIBRARY_NAME;
 const MOCK_FILE_RELATIVE_PATH: FileRelativePath = mockSetup.MOCK_FILE_RELATIVE_PATH;
 const MOCK_FILE_CONTENT_LINES: FileWholeLines = mockSetup.MOCK_FILE_CONTENT_LINES;
-const shellTestMock = mockSetup.shellTestMock;
 
 // Restore all mocks after the tests in this file have completed
 afterAll(() => {
@@ -26,13 +42,20 @@ afterAll(() => {
 // Very small tests to exercise basic helpers
 describe('shell helpers (basic)', () => {
 
+  const shellTestSpy = spyOn(shell, 'test') as Mock<(...args: unknown[]) => boolean>;
   const readSpy = spyOn(fs, 'readFileSync') as Mock<(...args: unknown[]) => string>;
   beforeEach(() => {
     readSpy.mockClear();
     readSpy.mockImplementation(() => MOCK_FILE_CONTENT_LINES.join('\n'));
   });
 
+  afterEach(() => {
+    shellTestSpy.mockClear();
+    readSpy.mockClear();
+  })
+
   it('readFileLines', () => {
+    shellTestSpy.mockImplementation(() => true); // Mock file does not exist
     const lines = readFileLines(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH);
     expect(lines).toEqual(MOCK_FILE_CONTENT_LINES);
   });
@@ -60,8 +83,8 @@ describe('shell helpers (basic)', () => {
   });
 
   it('toTocLine', () => {
-    expect(shell.toTocLine('My Section')).toBe('## my section');
-    expect(shell.toTocLine(' Another Section: Details ', 3)).toBe('### another section details');
+    expect(shellCls.toTocLine('My Section')).toBe('## my section');
+    expect(shellCls.toTocLine(' Another Section: Details ', 3)).toBe('### another section details');
   });
 });
 
@@ -136,12 +159,12 @@ describe('shell TOC operations', () => {
 
   it('matchTocNoThrow should return matches without throwing', () => {
     // Case 1: Unique match
-    let matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
+    let matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Section 1: Details');
     expect(matches.length).toBe(1);
     expect(matches[0]!.lineNumber).toBe(6);
 
     // Case 2: No match
-    matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section');
+    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'Non-Existent Section');
     expect(matches.length).toBe(0);
 
     // Case 3: Ambiguous match
@@ -151,7 +174,7 @@ describe('shell TOC operations', () => {
       '## section 1 (details)',
     ] as FileWholeLines;
     readSpy.mockImplementation(() => ambiguousTocLines.join('\n'));
-    matches = shell.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details');
+    matches = shellCls.matchTocNoThrow(MOCK_LIBRARY_NAME, MOCK_FILE_RELATIVE_PATH, 'section 1 details');
     expect(matches.length).toBe(2);
 
     // Restore spy
@@ -270,18 +293,24 @@ describe('shell file content modifications', () => {
 
 describe('createFile', () => {
 
-
+  const shellTestSpy = spyOn(shell, 'test') as Mock<(...args: unknown[]) => boolean>;
   const readSpy = spyOn(fs, 'readFileSync') as Mock<(...args: unknown[]) => string>;
   const writeSpy = spyOn(fs, 'writeFileSync') as Mock<(...args: unknown[]) => void>;
 
   beforeEach(() => {
+    shellTestSpy.mockClear();
     readSpy.mockClear();
     writeSpy.mockClear();
-    shellTestMock.mockImplementation(() => true);
   });
 
+  afterEach(() => {
+    shellTestSpy.mockClear();
+    readSpy.mockClear();
+    writeSpy.mockClear();
+  })
+
   it('should create a file if it does not exist', () => {
-    shellTestMock.mockImplementation(() => false); // Mock file does not exist
+    shellTestSpy.mockImplementation(() => false); // Mock file does not exist
     const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
     createFile(MOCK_LIBRARY_NAME, 'new-file.md', newContent);
     expect(writeSpy).toHaveBeenCalledTimes(1);
@@ -289,7 +318,7 @@ describe('createFile', () => {
   });
 
   it('should throw an error if the file already exists', () => {
-    shellTestMock.mockImplementation(() => true); // Mock file exists
+    shellTestSpy.mockImplementation(() => true); // Mock file exists
     const newContent: FileWholeLines = ['new file content'] as FileWholeLines;
     expect(() => createFile(MOCK_LIBRARY_NAME, 'existing-file.md', newContent)).toThrow('文件已存在，无法创建');
   });

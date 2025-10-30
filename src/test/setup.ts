@@ -36,16 +36,6 @@ export const MOCK_FILE_CONTENT_LINES = [
   ''
 ];
 
-export const shellTestMock = mock(() => true);
-
-// Mock the 'shelljs' module.
-// The 'test' function will always return true.
-await mock.module('shelljs', () => ({
-  default: {
-    test: shellTestMock,
-  }
-}));
-
 // Test data
 export const MOCK_LIBRARY_NAME = 'test-library';
 export const MOCK_FILE_RELATIVE_PATH = 'test.md';
