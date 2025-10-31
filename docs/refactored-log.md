@@ -8,3 +8,4 @@
 - **2025-10-30**: [**完善 `manual` 工具集并引入 `file` 工具集**] - 实现了 `addManualSection` 和一个更通用的 `editManualSection`（取代了原设计的 `update` 和 `delete`）。引入了基础的 `createFile` 工具。同时，将 `test` 目录迁移至 `src` 下，并编写了完整的 E2E 测试验证 `manual` 工具的功能。
 - **2025-10-30**: [**实现 `entity` 基础工具集**] - 实现了 `createEntity`, `addEntities`, `deleteEntities`, `readEntities`, `listEntities`, `getEntitiesToc`, `renameEntity` 等核心工具。完成了对 `entity` 工具集的现状分析，明确了后续需要开发的高级功能（如内容编辑、合并、垃圾回收等）。
 - **2025-10-30**: [**完成 `entity` 高级工具集**] - 实现了 `readEntitiesSections`, `addEntityContent`, `deleteEntityContent`, `replaceEntitySection`, `mergeEntities`, `garbageCollectRelations` 等所有高级工具。重构了 `shell.ts`，引入了 `readFrontMatter` 和 `writeFrontMatter` 辅助函数，极大地简化了元数据处理逻辑。至此，`entity` 工具集已全部完成。
+- **2025-10-31**: [**实现 `relation` 工具集**] - 实现了 `create_relations` 和 `delete_relations` 工具，用于在实体的 Front Matter 中添加和删除关系。更新了 `docs/refactored-design.md` 以反映新的基于行的 Front Matter 格式，并为新工具编写了完整的 E2E 测试。

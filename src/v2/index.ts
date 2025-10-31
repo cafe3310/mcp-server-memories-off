@@ -4,6 +4,7 @@ import { getEnvVar, logfile, setLogOutputFile } from "../utils.ts";
 import { manualTools } from "./tools/manual.ts";
 import { entityTools } from "./tools/entity.ts";
 import { backupTools } from "./tools/backup.ts";
+import { relationTools } from "./tools/relation.ts";
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type {McpHandlerDefinition} from "../typings.ts";
 
@@ -26,7 +27,7 @@ export async function runV2() {
   });
 
   // Register tools
-  const allTools = [...manualTools, ...entityTools, ...backupTools];
+  const allTools = [...manualTools, ...entityTools, ...backupTools, ...relationTools];
 
   // Register request handlers
   const toolTypes = Object.values(allTools).map(t => t.toolType);
