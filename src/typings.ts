@@ -63,7 +63,8 @@ export type MatchingKeys<T, V> = {
 }[keyof T];
 
 // endregion
-// region 具体 typings
+
+// region 命名和路径
 
 // 文件类型
 export const enum FileType {
@@ -71,6 +72,7 @@ export const enum FileType {
   FileTypeJourney,
   FileTypeMeta,
 }
+
 
 // 事物名称 - 如实体，记录名称。不带文件后缀名
 export type ThingName = WeakOpaque<string, 'ThingName'>;
@@ -91,13 +93,11 @@ export type FileAbsolutePath = WeakOpaque<string, 'FileAbsolutePath'>;
 // 如 "/home/user/docs/MyProjectDocs/entities"
 export type FolderAbsolutePath = WeakOpaque<string, 'FolderAbsolutePath'>;
 
-// 模糊匹配的章节标题。
-// 如 "installation guide"
-export type TocGlob = WeakOpaque<string, 'TocGlob'>;
+// endregion
 
-// 精确匹配的章节标题行。
-// 如 "## Installation (Guide):"
-export type TocExactLine = WeakOpaque<string, 'TocExactLine'>;
+// region content
+// 我们对内容的定义是
+// content 包括 toc, frontmatter, 以及普通正文
 
 // 模糊匹配的内容块，基于行。
 // 如 "this is the beginning of the section*"
@@ -122,6 +122,20 @@ export type ContentLocator = {
   type: 'Lines'
   contentLines: ContentExactLine[];
 }
+// 整个文件的所有行
+export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
+
+// endregion
+
+// region toc
+
+// 模糊匹配的章节标题。
+// 如 "installation guide"
+export type TocGlob = WeakOpaque<string, 'TocGlob'>;
+
+// 精确匹配的章节标题行。
+// 如 "## Installation (Guide):"
+export type TocExactLine = WeakOpaque<string, 'TocExactLine'>;
 
 // TOCLevel，从 1 开始计数
 // 1 - #
@@ -130,7 +144,7 @@ export type ContentLocator = {
 // 6 - ######
 export type TocLevel = WeakOpaque<number, 'TocLevel'>;
 
-// 一个 Toc 行项
+// 一个 Toc 行在文件中的结构化描述
 export type TocItem = {
   level: TocLevel;
   lineNumber: LineNumber;
@@ -146,11 +160,26 @@ export type TocItem = {
 // ]
 export type TocList = TocItem[];
 
-// 整个文件的所有行
-export type FileWholeLines = WeakOpaque<string[], 'FileWholeLines'>;
+// endregion
+// region Front Matter
+// 我们定义 frontmatter 只能是一级键值对，键和值均为字符串 - 而且每个项目必须仅占一行。
+// frontmatter 中的不同类型 key 可以通过前缀区分，例如 "relation xxx: content", "relation yyy: content"
 
-// YAML Front Matter
-export type FrontMatter = Map<string, string | string[] | object[]>;
+export type FrontMatterLine = WeakOpaque<string, 'FrontMatterLine'>;
+
+// 一个 frontmatter 项目的结构化描述
+export type FrontMatterItem = {name: string, value: string};
+
+export const enum FrontMatterPresetKeys {
+  // 例子：'date modified: 2024-01-01'
+  DateModified = 'date modified',
+  // 例子：'date created: 2023-12-31'
+  DateCreated = 'date created',
+  // 例子：'relation as member: team_name'
+  RelationAs = 'relation as',
+  // 例子：'aliases: alias1, alias2'
+  Aliases = 'aliases',
+}
 
 // endregion
 // region 工具 typings
