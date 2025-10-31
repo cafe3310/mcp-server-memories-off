@@ -171,6 +171,8 @@ export type FrontMatterLine = WeakOpaque<string, 'FrontMatterLine'>;
 export type FrontMatterItem = {name: string, value: string};
 
 export const enum FrontMatterPresetKeys {
+  // 例子：'entity type: Person'
+  EntityType = 'entity type',
   // 例子：'date modified: 2024-01-01'
   DateModified = 'date modified',
   // 例子：'date created: 2023-12-31'

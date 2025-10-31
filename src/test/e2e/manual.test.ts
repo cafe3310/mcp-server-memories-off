@@ -10,11 +10,11 @@ import {
 
 describe('E2E Manual Tools Lifecycle', () => {
   let serverProcess: ChildProcess;
-  const libraryName = 'manual-test-lib';
-  const metaFile = metaFilePath(libraryName);
+  const libraryName = 'test-library';
+  const metaFile = metaFilePath;
 
   beforeAll(() => {
-    serverProcess = resetLibAndBootMcp(libraryName);
+    serverProcess = resetLibAndBootMcp();
   });
 
   afterAll(() => {
@@ -23,7 +23,7 @@ describe('E2E Manual Tools Lifecycle', () => {
 
   test('should perform a full lifecycle of operations on meta.md', async () => {
     // Step 1: Read meta.md, confirm it's empty initially
-    let response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { library_name: libraryName } });
+    let response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: libraryName } });
     expect(response.result).toBe(`---file-start: ${libraryName}/meta.md---
 
 ---file-end---`);
@@ -33,7 +33,7 @@ describe('E2E Manual Tools Lifecycle', () => {
     const content1 = 'Hello, world!';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'addManualSection',
-      arguments: { library_name: libraryName, toc: toc1, newContent: content1 },
+      arguments: { libraryName: libraryName, toc: toc1, newContent: content1 },
     });
     expect(response.result).toContain('success');
     expectFileTotalLines(metaFile, [
@@ -42,14 +42,14 @@ describe('E2E Manual Tools Lifecycle', () => {
     ]);
 
     // Step 3: Read meta.md to confirm the new section exists
-    response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { library_name: libraryName } });
+    response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: libraryName } });
     expect(response.result).toContain(content1);
 
     // Step 4: Edit the content of the section
     const content2 = 'Hi.\nContent has been updated.';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'editManualSection',
-      arguments: { library_name: libraryName, oldContent: content1, newContent: content2  },
+      arguments: { libraryName: libraryName, oldContent: content1, newContent: content2  },
     });
     expect(response.result).toContain('success');
     expectFileTotalLines(metaFile, [
@@ -62,7 +62,7 @@ describe('E2E Manual Tools Lifecycle', () => {
     const content3 = 'Hi.';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'editManualSection',
-      arguments: { library_name: libraryName, oldContent: content2, newContent: content3  },
+      arguments: { libraryName: libraryName, oldContent: content2, newContent: content3  },
     });
     expect(response.result).toContain('success');
     expectFileTotalLines(metaFile, [
@@ -75,7 +75,7 @@ describe('E2E Manual Tools Lifecycle', () => {
     const content4 = 'This is the second section.';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'addManualSection',
-      arguments: { library_name: libraryName, toc: toc2, newContent: content4 },
+      arguments: { libraryName: libraryName, toc: toc2, newContent: content4 },
     });
     expect(response.result).toContain('success');
     expectFileTotalLines(metaFile, [
@@ -89,7 +89,7 @@ describe('E2E Manual Tools Lifecycle', () => {
     const content5 = 'Additional content in the first section.';
     response = await callMcp(serverProcess, 'tools/call', {
       name: 'addManualSection',
-      arguments: { library_name: libraryName, toc: toc1, newContent: content5 },
+      arguments: { libraryName: libraryName, toc: toc1, newContent: content5 },
     });
     expect(response.result).toEqual(`---status: success, message: content added successfully in meta.md---`);
     expectFileTotalLines(metaFile, [
@@ -101,7 +101,7 @@ describe('E2E Manual Tools Lifecycle', () => {
     ]);
 
     // Read final meta.md to confirm all changes
-    response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { library_name: libraryName } });
+    response = await callMcp(serverProcess, 'tools/call', { name: 'readManual', arguments: { libraryName: libraryName } });
     expect(response.result).toBe(`---file-start: ${libraryName}/meta.md---
 ## first section
 Hi.

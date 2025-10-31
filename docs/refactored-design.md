@@ -22,22 +22,33 @@
 
 ## 3. Markdown 文件结构定义
 
-每个 `.md` 文件都采用 YAML Front Matter 格式。
+每个 `.md` 文件都采用一种简化的、基于行的 YAML Front Matter 格式。
 
+- **一级键值对**: Front Matter 只能包含一级键值对。
+- **单行格式**: 每个键值对必须占据单行，格式为 `key: value`。
+- **字符串值**: 键和值都必须是字符串。
+- **前缀约定**: 使用键的前缀来区分不同类型的元数据。例如，关系使用 `relation` 前缀。
+
+**示例:**
 ```markdown
 ---
-entity type: <string>
-aliases:
-  - <string>
-date created: <datetime>
-date modified: <datetime>
-relations:
-  - relation type: <string>
-    relation to: <string>
+entity type: person
+aliases: John Doe, Johnny
+date created: 2025-10-31
+date modified: 2025-10-31
+relation knows: person-b
+relation works for: company-a
 ---
 
 正文内容...
 ```
+
+**预设键 (Preset Keys):**
+
+- `date modified`: 修改日期 (例如: `date modified: 2024-01-01`)
+- `date created`: 创建日期 (例如: `date created: 2023-12-31`)
+- `relation <type>`: 定义一个关系 (例如: `relation knows: person-b`)
+- `aliases`: 实体的别名，用逗号分隔 (例如: `aliases: alias1, alias2`)
 
 ---
 
@@ -72,31 +83,39 @@ relations:
 
 ### 4.2. `relation` 系列
 
-#### `create_relations(library_name, relations)`
-- **功能**: 在 `from` 实体的 Front Matter 中添加一条或多条关系。
+#### `create_relations(library_name, from_entity, relations)`
+- **功能**: 在 `from_entity` 实体的 Front Matter 中添加一条或多条关系。
+- **参数**:
+    - `from_entity`: 关系发出的实体名称。
+    - `relations`: 一个关系对象数组，每个对象包含 `type` 和 `to`。`[{type: "knows", to: "person-b"}]`
+- **实现**: 在 `from_entity` 的 frontmatter 中添加 `relation <type>: <to>` 行。
 - **返回**: 成功创建的关系列表。
-  ```yaml
-  created_relations:
-    - { from: a, to: b, type: knows }
-    - { from: c, to: d, type: parent of }
-  ```
+    ```yaml
+    created_relations:
+      - { from: from_entity, to: person-b, type: knows }
+    ```
 
-#### `delete_relations(library_name, relations)`
-- **功能**: 从 `from` 实体的 Front Matter 中删除一条或多条关系。
+#### `delete_relations(library_name, from_entity, relations)`
+- **功能**: 从 `from_entity` 实体的 Front Matter 中删除一条或多条关系。
+- **参数**:
+    - `from_entity`: 关系发出的实体名称。
+    - `relations`: 一个关系对象数组，每个对象包含 `type` 和 `to`。`[{type: "knows", to: "person-b"}]`
+- **实现**: 从 `from_entity` 的 frontmatter 中删除匹配的 `relation <type>: <to>` 行。
 - **返回**: 成功删除的关系列表。
-  ```yaml
-  deleted_relations:
-    - { from: a, to: b, type: knows }
-  ```
+    ```yaml
+    deleted_relations:
+      - { from: from_entity, to: person-b, type: knows }
+    ```
 
 #### `find_relations(library_name, to_entity?, relation_type?)`
-- **功能**: 根据“关系目标”或“关系类型”搜索关系。
+- **功能**: 在整个知识库中，根据“关系目标”或“关系类型”搜索关系。
+- **实现**: 遍历所有实体文件，解析其 frontmatter，匹配所有 `relation <type>: <to>` 行。
 - **返回**: 找到的关系列表。
-  ```yaml
-  found_relations:
-    - { from: entity-a, to: entity-b, type: knows }
-    - { from: entity-c, to: entity-b, type: knows }
-  ```
+    ```yaml
+    found_relations:
+      - { from: entity-a, to: entity-b, type: knows }
+      - { from: entity-c, to: entity-b, type: knows }
+    ```
 
 ### 4.3. `entity` 系列
 

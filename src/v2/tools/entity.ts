@@ -3,7 +3,7 @@ import {zodToJsonSchema} from 'zod-to-json-schema';
 import {
   FileType,
   type FileWholeLines,
-  type FrontMatter,
+  type FrontMatterLine, FrontMatterPresetKeys,
   type McpHandlerDefinition
 } from "../../typings";
 import yaml from 'yaml';
@@ -11,7 +11,7 @@ import shell from 'shelljs';
 import path from 'path';
 import {createFile, moveFileToTrash, readFileLines, renameFile, writeFileLines} from "../editor/file-ops.ts";
 import {getTocList} from "../editor/toc.ts";
-import {readFrontMatter, writeFrontMatter} from "../editor/front-matter.ts";
+import {readFrontMatterLines, writeFrontMatterLines} from "../editor/front-matter.ts";
 import {add, addInToc, deleteInToc, readSectionContent, replaceSection} from "../editor/editing.ts";
 import {getEntityDirPath} from "../runtime.ts";
 
@@ -63,16 +63,16 @@ export const addEntitiesTool = {
     for (const entity of entities) {
       createFile(libraryName, FileType.FileTypeEntity, entity.name, [] as FileWholeLines);
 
-      const frontMatter: FrontMatter = new Map();
+      const frontMatter: FrontMatterLine[] = [];
       if (entity.type) {
-        frontMatter.set('entity type', entity.type);
+        frontMatter.push(`${FrontMatterPresetKeys.EntityType}: ${entity.type}`);
       }
       if (entity.aliases && entity.aliases.length > 0) {
-        frontMatter.set('aliases', entity.aliases);
+        frontMatter.push(`${FrontMatterPresetKeys.Aliases}: ${entity.aliases.join(', ')}`);
       }
 
-      if (frontMatter.size > 0) {
-        writeFrontMatter(libraryName, FileType.FileTypeEntity, entity.name, frontMatter);
+      if (frontMatter.length > 0) {
+        writeFrontMatterLines(libraryName, FileType.FileTypeEntity, entity.name, frontMatter);
       }
 
       if (entity.content) {
@@ -255,14 +255,19 @@ export const readEntitiesSectionsTool = {
     for (const entityName of entityNames) {
       for (const sectionGlob of sectionGlobs) {
         if (sectionGlob === 'frontmatter') {
-          const frontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, entityName);
+          const frontmatter = readFrontMatterLines(libraryName, FileType.FileTypeEntity, entityName);
           if (frontmatter) {
-            const content = yaml.stringify(Object.fromEntries(frontmatter));
-            results.push({ entityName: entityName, section: sectionGlob, content });
+            results.push({ entityName: entityName, section: sectionGlob, content: frontmatter.join('\n') });
+          } else {
+            results.push({ entityName: entityName, section: sectionGlob, content: 'no frontmatter' });
           }
         } else {
           const sectionContentLines = readSectionContent(libraryName, FileType.FileTypeEntity, entityName, sectionGlob);
-          results.push({ entityName: entityName, section: sectionGlob, content: sectionContentLines.join('\n') });
+          if (sectionContentLines.length === 0) {
+            results.push({ entityName: entityName, section: sectionGlob, content: 'section not found'});
+          } else {
+            results.push({ entityName: entityName, section: sectionGlob, content: sectionContentLines.join('\n') });
+          }
         }
       }
     }
@@ -354,24 +359,20 @@ export const mergeEntitiesTool = {
   },
   handler: (args: unknown) => {
     const { libraryName, sourceNames, targetName } = MergeEntitiesInputSchema.parse(args);
-    const targetFrontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, targetName) ?? new Map() as FrontMatter;
+    const targetFrontmatter = readFrontMatterLines(libraryName, FileType.FileTypeEntity, targetName) ?? [];
     const targetContent = readFileLines(libraryName, FileType.FileTypeEntity, targetName);
 
     const mergedContent = [...targetContent];
 
     for (const sourceName of sourceNames) {
-      const sourceFrontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, sourceName);
+      const sourceFrontmatter = readFrontMatterLines(libraryName, FileType.FileTypeEntity, sourceName);
       const sourceContent = readFileLines(libraryName, FileType.FileTypeEntity, sourceName);
 
-      // Merge frontmatter
+      // Merge frontmatter.
       if (sourceFrontmatter) {
-        for (const [key, value] of sourceFrontmatter.entries()) {
-          if (targetFrontmatter.has(key) && Array.isArray(targetFrontmatter.get(key))) {
-            const targetArray: unknown = targetFrontmatter.get(key);
-            const sourceArray: string[] = Array.isArray(value) ? value : [value];
-            targetFrontmatter.set(key, [...new Set([...targetArray, ...sourceArray])]);
-          } else {
-            targetFrontmatter.set(key, value);
+        for (const line of sourceFrontmatter) {
+          if (!targetFrontmatter.includes(line)) {
+            targetFrontmatter.push(line);
           }
         }
       }
@@ -384,7 +385,7 @@ export const mergeEntitiesTool = {
       moveFileToTrash(libraryName, FileType.FileTypeEntity, sourceName);
     }
 
-    writeFrontMatter(libraryName,  FileType.FileTypeEntity, targetName, targetFrontmatter);
+    writeFrontMatterLines(libraryName,  FileType.FileTypeEntity, targetName, targetFrontmatter);
     add(libraryName,  FileType.FileTypeEntity, targetName, mergedContent);
 
     return `---status: success, message: Merged ${sourceNames.length} entities into '${targetName}'.---`;
@@ -405,48 +406,9 @@ export const garbageCollectRelationsTool = {
     inputSchema: zodToJsonSchema(GarbageCollectRelationsInputSchema),
   },
   handler: (args: unknown) => {
-    const { libraryName, dryRun } = GarbageCollectRelationsInputSchema.parse(args);
-    const entitiesPath = getEntityDirPath(libraryName);
-    const allEntityFiles = shell.ls(path.join(entitiesPath, '*.md'));
-    const allEntityNames = new Set(allEntityFiles.map(file => path.basename(file, '.md')));
-
-    const danglingRelations: { inEntity: string; relationTo: string; type: string }[] = [];
-    const affectedEntities = new Map<string, FrontMatter>();
-
-    for (const entityFile of allEntityFiles) {
-      const entityName = path.basename(entityFile, '.md');
-      const frontmatter = readFrontMatter(libraryName, FileType.FileTypeEntity, entityName);
-
-      if (frontmatter?.has('relations')) {
-        const relations = frontmatter.get('relations') as { 'relation to': string; 'relation type': string }[];
-        const validRelations = [];
-        let hasDangling = false;
-
-        for (const relation of relations) {
-          if (allEntityNames.has(relation['relation to'])) {
-            validRelations.push(relation);
-          } else {
-            danglingRelations.push({ inEntity: entityName, relationTo: relation['relation to'], type: relation['relation type'] });
-            hasDangling = true;
-          }
-        }
-
-        if (hasDangling && !dryRun) {
-          frontmatter.set('relations', validRelations);
-          affectedEntities.set(entityName, frontmatter);
-        }
-      }
-    }
-
-    if (!dryRun) {
-      for (const [entityName, frontmatter] of affectedEntities.entries()) {
-        writeFrontMatter(libraryName, FileType.FileTypeEntity, entityName, frontmatter);
-      }
-      return `---status: success, cleaned_relations_count: ${danglingRelations.length}, affected_entities: ${[...affectedEntities.keys()]}---`;
-    } else {
-      return yaml.stringify({ danglingRelationsFound: danglingRelations });
-    }
-  },
+    // TODO 其他工具尚未实现完毕，暂时不实现
+    return {result: 'not implemented'};
+  }
 };
 
 export const entityTools: McpHandlerDefinition[] = [createEntityTool, addEntitiesTool, deleteEntitiesTool, readEntitiesTool, listEntitiesTool, getEntitiesTocTool, renameEntityTool, readEntitiesSectionsTool, addEntityContentTool, deleteEntityContentTool, replaceEntitySectionTool, mergeEntitiesTool, garbageCollectRelationsTool];

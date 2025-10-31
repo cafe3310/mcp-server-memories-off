@@ -67,9 +67,7 @@ describe('E2E Entity Tools', () => {
     const path1 = path.join(tempLibraryPath, 'entities', 'entity-with-all-fields.md');
     const content1 = fs.readFileSync(path1, 'utf-8');
     expect(content1).toContain('entity type: person');
-    expect(content1).toContain('aliases:');
-    expect(content1).toContain('- E1');
-    expect(content1).toContain('- Entity One');
+    expect(content1).toContain('aliases: E1, Entity One');
     expect(content1).toContain('This is the content for entity one.');
 
     // Verify entity-with-only-name-and-content

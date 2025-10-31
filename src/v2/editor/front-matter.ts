@@ -39,11 +39,15 @@ export function writeFrontMatterLines(libraryName: LibraryName, fileType: FileTy
   const lines = readFileLines(libraryName, fileType, thingName);
   const frontMatterLocation = locateFrontMatter(lines);
 
+  // 标准化 frontMatter 行
+  frontMatter = frontMatter.map(normalizeFrontMatterLine);
+
   let newLines: FileWholeLines;
   if (frontMatterLocation) {
     newLines = [
-      ...lines.slice(0, frontMatterLocation.startLineNumber),
+      '---',
       ...frontMatter,
+      '---',
       ...lines.slice(frontMatterLocation.endLineNumber)
     ] as FileWholeLines;
   } else {
