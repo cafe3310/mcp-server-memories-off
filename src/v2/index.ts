@@ -6,7 +6,8 @@ import { entityTools } from "./tools/entity.ts";
 import { backupTools } from "./tools/backup.ts";
 import { relationTools } from "./tools/relation.ts";
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import type {McpHandlerDefinition} from "../typings.ts";
+import { retrievalTools } from "./tools/retrieval.ts"; // Changed import
+import type {McpHandlerDefinition}from "../typings.ts";
 
 // This is the entry point for the v2 server.
 export async function runV2() {
@@ -27,7 +28,7 @@ export async function runV2() {
   });
 
   // Register tools
-  const allTools = [...manualTools, ...entityTools, ...backupTools, ...relationTools];
+  const allTools = [...manualTools, ...entityTools, ...backupTools, ...relationTools, ...retrievalTools]; // Changed allTools
 
   // Register request handlers
   const toolTypes = Object.values(allTools).map(t => t.toolType);
