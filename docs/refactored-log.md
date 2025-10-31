@@ -9,3 +9,4 @@
 - **2025-10-30**: [**实现 `entity` 基础工具集**] - 实现了 `createEntity`, `addEntities`, `deleteEntities`, `readEntities`, `listEntities`, `getEntitiesToc`, `renameEntity` 等核心工具。完成了对 `entity` 工具集的现状分析，明确了后续需要开发的高级功能（如内容编辑、合并、垃圾回收等）。
 - **2025-10-30**: [**完成 `entity` 高级工具集**] - 实现了 `readEntitiesSections`, `addEntityContent`, `deleteEntityContent`, `replaceEntitySection`, `mergeEntities`, `garbageCollectRelations` 等所有高级工具。重构了 `shell.ts`，引入了 `readFrontMatter` 和 `writeFrontMatter` 辅助函数，极大地简化了元数据处理逻辑。至此，`entity` 工具集已全部完成。
 - **2025-10-31**: [**实现 `relation` 工具集**] - 实现了 `create_relations` 和 `delete_relations` 工具，用于在实体的 Front Matter 中添加和删除关系。更新了 `docs/refactored-design.md` 以反映新的基于行的 Front Matter 格式，并为新工具编写了完整的 E2E 测试。
+- **2025-10-31**: [**移除 v1 代码**] - 删除了 `src/v1` 目录及其所有内容，并更新了 `src/index.ts`，使其直接启动 v2 版本，不再需要版本选择逻辑。此举标志着项目完全过渡到新的 Shell-Native 架构。
