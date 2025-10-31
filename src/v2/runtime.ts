@@ -1,7 +1,7 @@
 import {checks, logfile} from '../utils.ts';
 import path from "path";
 import shell from 'shelljs';
-import type {FileAbsolutePath, FolderAbsolutePath} from "../typings.ts";
+import type {FileAbsolutePath, FolderAbsolutePath, FileType, ThingName} from "../typings.ts";
 
 // Define subdirectory names
 export const ENTITIES_DIR = 'entities';
@@ -78,6 +78,10 @@ export function getMetaFilePath(libraryName: string): FileAbsolutePath {
 
 export function getLibraries(): Map<string, string> {
   return libraries;
+}
+
+export function getThingNameFromPath(filePath: string, _fileType: FileType): ThingName {
+  return path.basename(filePath, path.extname(filePath)) as ThingName;
 }
 
 function formatTimestamp(): string {
