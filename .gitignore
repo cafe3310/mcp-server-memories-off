@@ -289,3 +289,6 @@ out
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node,jetbrains
+# Temporary files for E2E tests
+/tmp
+/test-lib

@@ -27,11 +27,11 @@ export function checkObjHas<T>(x: unknown, key: string, valueType: string): asse
 let logConsole: Console = console;
 
 export function logfile(componentName: string, ...args: unknown[]) {
-  logConsole.log(componentName, ...args);
+  logConsole.error(componentName, ...args);
 }
 
 export function logfileV(componentName: string, ...args: unknown[]) {
-  logConsole.log(componentName, ...args);
+  logConsole.error(componentName, ...args);
 }
 
 export function logfileE(componentName: string, error: unknown, ...args: unknown[]) {
@@ -43,7 +43,7 @@ export function setLogOutputFile(dir: string) {
   const date = new Date().toISOString().split("T")[0];
   const file = `${dir}/mcp-server-memories-off-log-${date}.log`;
   console.error('mcp-server-memories-off log file is at', file);
-  logConsole = new console.Console(fs.createWriteStream(file));
+  logConsole = new console.Console(fs.createWriteStream(file, { flags: 'a' }));
 }
 
 // 获取环境变量，未设置则返回默认值并记录
